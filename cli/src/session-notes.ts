@@ -5,6 +5,11 @@ export function cleanUserText(raw: string | null | undefined): string | null {
   let text = raw.trim();
   text = text.replace(/Sender\s*\([^)]*\):\s*```[\s\S]*?```/gi, "");
   text = text.replace(/```json\s*\{[\s\S]*?\}\s*```/g, "");
+  text = text.replace(/<environment_context>[\s\S]*?<\/environment_context>/gi, "");
+  text = text.replace(
+    /#\s*Context from my IDE setup:[\s\S]*?## My request for Codex:\s*/gi,
+    ""
+  );
   text = text.replace(/<user_query>\s*/g, "").replace(/<\/user_query>/g, "");
   text = text.replace(/<[^>]+>/g, " ");
   text = text.replace(/\[(Mon|Tue|Wed|Thu|Fri|Sat|Sun)[^\]]*\]\s*/g, "");
@@ -37,5 +42,6 @@ export function buildSummaryNotes(input: {
   if (messages.length) {
     parts.push(`User requests:\n- ${messages.slice(0, 15).join("\n- ")}`);
   }
-  return parts.join("\n");
+  const joined = parts.join("\n");
+  return joined.length > 8000 ? joined.slice(0, 7999).trimEnd() + "…" : joined;
 }

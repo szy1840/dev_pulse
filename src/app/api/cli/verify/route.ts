@@ -4,7 +4,7 @@ import { authenticateCliRequest } from "@/lib/cli-auth";
 
 export const runtime = "nodejs";
 
-// `npx devpulse login` calls this to validate a token and show who/what it maps to.
+// `devpulse login` calls this to validate a token and show who/what it maps to.
 export async function POST(req: Request) {
   const principal = await authenticateCliRequest(req);
   if (!principal) {

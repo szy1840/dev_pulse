@@ -60,6 +60,16 @@ function dayKeyLocal(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+function hourKeyLocal(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const h = String(d.getHours()).padStart(2, "0");
+  return `${y}-${m}-${day}T${h}:00`;
+}
+
+export type ActivityGranularity = "day" | "hour";
+
 export async function getTeamStats(teamId: string, since: Date | null) {
   const rows = await fetchTeamSessions(teamId, since);
   const members = new Set<string>();
@@ -138,8 +148,27 @@ function fillDailySeries(
   return out;
 }
 
-/** Team-wide daily activity plus per-member series (top contributors + Others). */
-export async function getDailyActivityWithMembers(teamId: string, since: Date | null) {
+function fillHourlySeries(dayStart: Date, map: Map<string, DayAgg>): DailyActivityPoint[] {
+  const out: DailyActivityPoint[] = [];
+  const endHour = new Date().getHours();
+  for (let h = 0; h <= endHour; h++) {
+    const cursor = new Date(dayStart);
+    cursor.setHours(h, 0, 0, 0);
+    const k = hourKeyLocal(cursor);
+    const v = map.get(k) ?? { sessions: 0, inputTokens: 0, outputTokens: 0 };
+    out.push({ date: k, ...v, tokens: v.inputTokens + v.outputTokens });
+  }
+  return out;
+}
+
+/** Team-wide activity plus per-member series (top contributors + Others). */
+export async function getDailyActivityWithMembers(
+  teamId: string,
+  since: Date | null,
+  options?: { granularity?: ActivityGranularity }
+) {
+  const granularity = options?.granularity ?? "day";
+  const bucketKey = granularity === "hour" ? hourKeyLocal : dayKeyLocal;
   const rows = await fetchTeamSessions(teamId, since);
   const teamMap = new Map<string, DayAgg>();
   const byUser = new Map<string, Map<string, DayAgg>>();
@@ -150,7 +179,7 @@ export async function getDailyActivityWithMembers(teamId: string, since: Date | 
     const d = toDate(r.started_at);
     if (!d) continue;
     if (!earliest || d < earliest) earliest = d;
-    const k = dayKeyLocal(d);
+    const k = bucketKey(d);
 
     const team = teamMap.get(k) ?? { sessions: 0, inputTokens: 0, outputTokens: 0 };
     team.sessions += 1;
@@ -172,8 +201,16 @@ export async function getDailyActivityWithMembers(teamId: string, since: Date | 
     userTotals.set(r.user_id, (userTotals.get(r.user_id) ?? 0) + r.input_tokens + r.output_tokens);
   }
 
-  const team = fillDailySeries(since, earliest, teamMap);
+  const team =
+    granularity === "hour" && since
+      ? fillHourlySeries(since, teamMap)
+      : fillDailySeries(since, earliest, teamMap);
   if (team.length === 0) return { team, members: [] as MemberDailyActivity[] };
+
+  const fillSeries = (map: Map<string, DayAgg>) =>
+    granularity === "hour" && since
+      ? fillHourlySeries(since, map)
+      : fillDailySeries(since, earliest, map);
 
   const userIds = [...byUser.keys()];
   const profilesById = new Map<string, string>();
@@ -199,7 +236,7 @@ export async function getDailyActivityWithMembers(teamId: string, since: Date | 
   const members: MemberDailyActivity[] = top.map(({ id }) => ({
     memberId: id,
     name: profilesById.get(id) ?? "Member",
-    data: fillDailySeries(since, earliest, byUser.get(id) ?? new Map()),
+    data: fillSeries(byUser.get(id) ?? new Map()),
   }));
 
   if (rest.length > 0) {
@@ -216,7 +253,7 @@ export async function getDailyActivityWithMembers(teamId: string, since: Date | 
     members.push({
       memberId: "__others__",
       name: "Others",
-      data: fillDailySeries(since, earliest, othersMap),
+      data: fillSeries(othersMap),
     });
   }
 
@@ -229,8 +266,14 @@ export async function getDailyActivity(teamId: string, since: Date | null) {
 }
 
 /** 7×24 grid (weekday × hour) of session counts for an activity heatmap. */
-export async function getHourlyHeatmap(teamId: string, since: Date | null) {
-  const rows = await fetchTeamSessions(teamId, since);
+export type HeatmapData = { grid: number[][]; max: number };
+
+export type MemberHeatmap = HeatmapData & {
+  memberId: string;
+  name: string;
+};
+
+function buildHeatmapGrid(rows: Pick<SessionRow, "started_at">[]): HeatmapData {
   const grid: number[][] = Array.from({ length: 7 }, () => new Array(24).fill(0));
   let max = 0;
   for (const r of rows) {
@@ -240,6 +283,57 @@ export async function getHourlyHeatmap(teamId: string, since: Date | null) {
     if (cell > max) max = cell;
   }
   return { grid, max };
+}
+
+export async function getHourlyHeatmapWithMembers(
+  teamId: string,
+  since: Date | null
+): Promise<{ team: HeatmapData; members: MemberHeatmap[] }> {
+  const rows = await fetchTeamSessions(teamId, since);
+  const team = buildHeatmapGrid(rows);
+
+  const byUser = new Map<string, SessionRow[]>();
+  for (const r of rows) {
+    const list = byUser.get(r.user_id) ?? [];
+    list.push(r);
+    byUser.set(r.user_id, list);
+  }
+
+  const userIds = [...byUser.keys()];
+  const profilesById = new Map<string, string>();
+  if (userIds.length > 0) {
+    const admin = getAdmin();
+    const { data: profileData } = await admin.database
+      .from("profiles")
+      .select("id, name")
+      .in("id", userIds);
+    for (const p of (profileData as { id: string; name: string | null }[] | null) ?? []) {
+      profilesById.set(p.id, p.name?.trim() || "Member");
+    }
+  }
+
+  const sessionTotal = (grid: number[][]) => grid.reduce((sum, row) => sum + row.reduce((a, b) => a + b, 0), 0);
+
+  const members: MemberHeatmap[] = userIds
+    .map((id) => {
+      const { grid, max } = buildHeatmapGrid(byUser.get(id) ?? []);
+      return {
+        memberId: id,
+        name: profilesById.get(id) ?? "Member",
+        grid,
+        max,
+      };
+    })
+    .filter((m) => sessionTotal(m.grid) > 0)
+    .sort((a, b) => sessionTotal(b.grid) - sessionTotal(a.grid));
+
+  return { team, members };
+}
+
+/** @deprecated Prefer getHourlyHeatmapWithMembers */
+export async function getHourlyHeatmap(teamId: string, since: Date | null) {
+  const { team } = await getHourlyHeatmapWithMembers(teamId, since);
+  return team;
 }
 
 /** Sessions and tokens grouped by project, busiest first. */

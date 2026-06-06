@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth";
 
-const TOOLS = ["Claude Code", "Cursor", "OpenClaw"];
+const TOOLS = ["Claude Code", "Codex", "Cursor", "OpenClaw"];
 
 export default async function Home() {
   const user = await getCurrentUser();
@@ -127,7 +127,7 @@ export default async function Home() {
                 icon={<Terminal className="h-5 w-5" />}
                 title="Log in on your machine"
                 body="Install the CLI and run login — your browser opens to authorize this computer."
-                code="devpulse login"
+                code={"npm install -g devpulse-ai\ndevpulse login"}
               />
               <Step
                 n={3}
@@ -252,7 +252,7 @@ function Step({
       <h3 className="font-medium">{title}</h3>
       <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted-foreground">{body}</p>
       {code && (
-        <code className="mt-3 block rounded-md border bg-muted/60 px-2.5 py-1.5 font-mono text-xs">
+        <code className="mt-3 block whitespace-pre-wrap rounded-md border bg-muted/60 px-2.5 py-1.5 font-mono text-xs">
           {code}
         </code>
       )}

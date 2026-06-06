@@ -9,7 +9,7 @@ import {
   YAxis,
 } from "recharts";
 import { ChartSize } from "./chart-size";
-import { formatCompact, formatNumber } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import { colorAt, AXIS_PROPS } from "./chart-theme";
 import { TooltipCard } from "./chart-tooltip";
 
@@ -31,9 +31,13 @@ export function BarListChart({
     return <p className="py-10 text-center text-sm text-muted-foreground">No data yet.</p>;
   }
 
+  // Reserve right margin for bar-end labels so multi-digit values aren't clipped.
+  const maxLabelChars = Math.max(...data.map((d) => formatNumber(d.value).length));
+  const rightMargin = Math.max(32, maxLabelChars * 8 + 8);
+
   return (
     <ChartSize height={height}>
-      <BarChart data={data} layout="vertical" margin={{ top: 0, right: 12, bottom: 0, left: 0 }}>
+      <BarChart data={data} layout="vertical" margin={{ top: 0, right: rightMargin, bottom: 0, left: 0 }}>
         <XAxis type="number" hide />
         <YAxis
           type="category"
@@ -61,7 +65,7 @@ export function BarListChart({
             position: "right",
             fontSize: 11,
             fill: "hsl(var(--muted-foreground))",
-            formatter: (v) => formatCompact(Number(v)),
+            formatter: (v) => formatNumber(Number(v)),
           }}
         >
           {data.map((_, i) => (

@@ -34,9 +34,17 @@ export type MemberSeries = {
 type Metric = "tokens" | "sessions";
 type View = "team" | "members";
 
-function shortDate(d: string): string {
+function formatBucket(d: string, granularity: "day" | "hour"): string {
   try {
-    return format(parseISO(d), "MMM d");
+    return granularity === "hour" ? format(parseISO(d), "ha") : format(parseISO(d), "MMM d");
+  } catch {
+    return d;
+  }
+}
+
+function formatBucketTitle(d: string, granularity: "day" | "hour"): string {
+  try {
+    return granularity === "hour" ? format(parseISO(d), "h:mm a") : format(parseISO(d), "MMM d, yyyy");
   } catch {
     return d;
   }
@@ -77,9 +85,11 @@ function ToggleGroup<T extends string>({
 export function ActivityTrendChart({
   teamData,
   memberSeries = [],
+  granularity = "day",
 }: {
   teamData: DailyPoint[];
   memberSeries?: MemberSeries[];
+  granularity?: "day" | "hour";
 }) {
   const [metric, setMetric] = useState<Metric>("tokens");
   const [view, setView] = useState<View>("team");
@@ -138,7 +148,7 @@ export function ActivityTrendChart({
             <XAxis
               dataKey="date"
               {...AXIS_PROPS}
-              tickFormatter={shortDate}
+              tickFormatter={(d) => formatBucket(String(d), granularity)}
               interval={tickStep - 1}
               minTickGap={8}
             />
@@ -159,7 +169,7 @@ export function ActivityTrendChart({
                         { label: "Sessions", value: formatNumber(p.sessions), color: "hsl(var(--chart-4))" },
                         { label: "Tokens", value: formatNumber(p.tokens) },
                       ];
-                return <TooltipCard title={shortDate(String(label))} rows={rows} />;
+                return <TooltipCard title={formatBucketTitle(String(label), granularity)} rows={rows} />;
               }}
             />
             {metric === "tokens" ? (
@@ -197,7 +207,7 @@ export function ActivityTrendChart({
             <XAxis
               dataKey="date"
               {...AXIS_PROPS}
-              tickFormatter={shortDate}
+              tickFormatter={(d) => formatBucket(String(d), granularity)}
               interval={tickStep - 1}
               minTickGap={8}
             />
@@ -217,7 +227,7 @@ export function ActivityTrendChart({
                       color: memberColors.get(String(p.dataKey)),
                     };
                   });
-                return <TooltipCard title={shortDate(String(label))} rows={rows} />;
+                return <TooltipCard title={formatBucketTitle(String(label), granularity)} rows={rows} />;
               }}
             />
             <Legend

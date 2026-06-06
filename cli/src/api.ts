@@ -34,8 +34,9 @@ async function request<T>(config: Config, path: string, body: unknown): Promise<
   if (!res.ok) {
     let detail = res.statusText;
     try {
-      const json = (await res.json()) as { error?: string };
+      const json = (await res.json()) as { error?: string; details?: unknown };
       if (json.error) detail = json.error;
+      if (json.details) detail += `: ${JSON.stringify(json.details)}`;
     } catch {
       /* ignore */
     }

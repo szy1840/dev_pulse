@@ -23,14 +23,23 @@ export function formatDuration(ms: number): string {
 
 const TOOL_LABELS: Record<string, string> = {
   "claude-code": "Claude Code",
+  codex: "Codex",
   cursor: "Cursor",
   openclaw: "OpenClaw",
 };
 
+/** Normalize tool slug for lookups, e.g. "Codex" -> "codex". */
+export function normalizeToolSlug(tool: string | null | undefined): string {
+  if (!tool) return "unknown";
+  const slug = tool.trim().toLowerCase().replace(/\s+/g, "-");
+  if (slug === "claude" || slug === "claude-code") return "claude-code";
+  return slug;
+}
+
 /** Human-readable coding agent name, e.g. "claude-code" -> "Claude Code". */
 export function prettyTool(tool: string | null | undefined): string {
   if (!tool) return "Unknown";
-  return TOOL_LABELS[tool] ?? tool.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  return TOOL_LABELS[normalizeToolSlug(tool)] ?? tool.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 /** Shorten a model id for display, e.g. "claude-opus-4-8" -> "Opus 4.8". */

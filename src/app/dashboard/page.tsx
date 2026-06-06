@@ -6,7 +6,7 @@ import {
   getToolBreakdown,
   getProjectBreakdown,
   getDailyActivityWithMembers,
-  getHourlyHeatmap,
+  getHourlyHeatmapWithMembers,
   getMemberActivity,
   getSessionsForSummary,
   periodStart,
@@ -21,7 +21,7 @@ import { ActivityTrendChart } from "@/components/charts/activity-trend-chart";
 import { DonutChart } from "@/components/charts/donut-chart";
 import { RadialChart } from "@/components/charts/radial-chart";
 import { BarListChart } from "@/components/charts/bar-list-chart";
-import { ActivityHeatmap } from "@/components/charts/activity-heatmap";
+import { ActivityHeatmapPanel } from "@/components/charts/activity-heatmap-panel";
 import { TokenCompositionBar } from "@/components/charts/token-composition-bar";
 import { Sparkline } from "@/components/charts/sparkline";
 import { TeamTodaySummary } from "@/components/team-today-summary";
@@ -41,15 +41,16 @@ export default async function OverviewPage({
 
   const period = resolvePeriod((await searchParams).period);
   const since = periodStart(period);
+  const activityGranularity = period === "today" ? "hour" : "day";
 
   const [stats, dailyActivity, models, tools, projects, heatmap, todaySessions, todayStats, membersToday] =
     await Promise.all([
       getTeamStats(team.id, since),
-      getDailyActivityWithMembers(team.id, since),
+      getDailyActivityWithMembers(team.id, since, { granularity: activityGranularity }),
       getModelBreakdown(team.id, since),
       getToolBreakdown(team.id, since),
       getProjectBreakdown(team.id, since),
-      getHourlyHeatmap(team.id, since),
+      getHourlyHeatmapWithMembers(team.id, since),
       getSessionsForSummary(team.id, periodStart("today")),
       getTeamStats(team.id, periodStart("today")),
       getMemberActivity(team.id, periodStart("today")),
@@ -161,10 +162,18 @@ export default async function OverviewPage({
       {/* Activity trend */}
       <ChartCard
         title="Activity over time"
-        description="Daily tokens and sessions — team total or split by member"
+        description={
+          period === "today"
+            ? "Hourly tokens and sessions today — team total or split by member"
+            : "Daily tokens and sessions — team total or split by member"
+        }
         icon={<Activity className="h-4 w-4" />}
       >
-        <ActivityTrendChart teamData={daily} memberSeries={memberDaily} />
+        <ActivityTrendChart
+          teamData={daily}
+          memberSeries={memberDaily}
+          granularity={activityGranularity}
+        />
       </ChartCard>
 
       {/* Models + token composition */}
@@ -208,10 +217,10 @@ export default async function OverviewPage({
       {/* Heatmap */}
       <ChartCard
         title="When the team codes"
-        description="Sessions by weekday and hour of day"
+        description="Sessions by weekday and hour — all team or one member"
         icon={<Clock className="h-4 w-4" />}
       >
-        <ActivityHeatmap grid={heatmap.grid} max={heatmap.max} />
+        <ActivityHeatmapPanel team={heatmap.team} members={heatmap.members} />
       </ChartCard>
     </div>
   );

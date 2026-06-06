@@ -42,17 +42,20 @@ export default async function SettingsPage() {
         <CardContent className="space-y-2 text-sm">
           <p className="text-muted-foreground">Run these on each developer&apos;s machine:</p>
           <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs leading-relaxed">
-{`# authenticate (opens your browser)
-npx devpulse login
+{`# install once per machine (Node.js 22+)
+npm install -g devpulse-ai
+
+# authenticate (opens your browser)
+devpulse login
 
 # or paste a token manually
-npx devpulse login --no-browser
+devpulse login --no-browser
 
 # scan local AI tool logs and upload new sessions
-npx devpulse sync
+devpulse sync
 
 # check what's configured and what would sync
-npx devpulse status`}
+devpulse status`}
           </pre>
         </CardContent>
       </Card>

@@ -72,7 +72,7 @@ export default async function SessionsPage({
           {rows.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
               No sessions in this period. Run{" "}
-              <code className="rounded bg-muted px-1">npx devpulse sync</code> to upload.
+              <code className="rounded bg-muted px-1">devpulse sync</code> to upload.
             </p>
           ) : (
             <Table>
@@ -81,7 +81,7 @@ export default async function SessionsPage({
                   <TableHead>Member</TableHead>
                   <TableHead>Project</TableHead>
                   <TableHead className="min-w-[220px]">Summary</TableHead>
-                  <TableHead>Agent</TableHead>
+                  <TableHead className="w-[108px] text-center">Agent</TableHead>
                   <TableHead>Model</TableHead>
                   <TableHead className="text-right">Tokens</TableHead>
                   <TableHead className="text-right">Duration</TableHead>
@@ -113,8 +113,10 @@ export default async function SessionsPage({
                           )}
                         </p>
                       </TableCell>
-                      <TableCell>
-                        <ToolBadge tool={s.tool} />
+                      <TableCell className="text-center">
+                        <div className="flex justify-center">
+                          <ToolBadge tool={s.tool} />
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{prettyModel(s.model)}</Badge>

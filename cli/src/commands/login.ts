@@ -53,8 +53,7 @@ export async function login(opts: LoginOptions) {
 
   if (!token) {
     ui.error("No token provided.");
-    process.exitCode = 1;
-    return;
+    process.exit(1);
   }
 
   config.token = token.trim();
@@ -68,12 +67,14 @@ export async function login(opts: LoginOptions) {
       `Logged in as ${res.user.name ?? res.user.email ?? res.user.id} → team "${res.team.name ?? res.team.id}".`
     );
     ui.dim("Run `devpulse sync` to upload your AI coding sessions.");
+    // Browser login starts a localhost callback server; force-exit so the shell prompt returns.
+    process.exit(0);
   } catch (err) {
     if (err instanceof ApiError && err.status === 401) {
       ui.error("Token rejected. Double-check it was copied correctly and isn't revoked.");
     } else {
       ui.error(`Login failed: ${(err as Error).message}`);
     }
-    process.exitCode = 1;
+    process.exit(1);
   }
 }

@@ -49,9 +49,14 @@ export function CliAuthorizeForm({ state, port, hostname, teamName }: Props) {
 
   if (done) {
     return (
-      <p className="text-sm text-muted-foreground">
-        Finishing setup… If this page does not redirect, return to the terminal.
-      </p>
+      <div className="space-y-2 text-sm text-muted-foreground">
+        <p className="font-medium text-foreground">Authorized — connecting your terminal…</p>
+        <p>
+          Your browser will briefly open <code className="rounded bg-muted px-1">127.0.0.1</code>{" "}
+          to hand the token to the CLI on your machine. That localhost step is expected.
+        </p>
+        <p>You can close this tab once the terminal shows a success message.</p>
+      </div>
     );
   }
 

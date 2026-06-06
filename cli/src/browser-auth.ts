@@ -63,6 +63,9 @@ export function waitForBrowserAuth(
       if (settled) return;
       settled = true;
       if (timer) clearTimeout(timer);
+      // Force-close lingering browser keep-alive connections so the CLI exits.
+      server.closeIdleConnections?.();
+      server.closeAllConnections();
       server.close();
       if (err) reject(err);
       else resolve(result!);
@@ -70,8 +73,9 @@ export function waitForBrowserAuth(
 
     const server = http.createServer((req, res) => {
       if (!req.url?.startsWith("/callback")) {
-        res.writeHead(404);
+        res.writeHead(404, { Connection: "close" });
         res.end("Not found");
+        req.socket.destroy();
         return;
       }
 
@@ -80,14 +84,16 @@ export function waitForBrowserAuth(
       const returnedState = url.searchParams.get("state");
 
       if (!token || returnedState !== state) {
-        res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" });
+        res.writeHead(400, { "Content-Type": "text/html; charset=utf-8", Connection: "close" });
         res.end(errorHtml("Invalid or missing authorization parameters."));
+        req.socket.destroy();
         finish(new Error("Authorization callback rejected."));
         return;
       }
 
-      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", Connection: "close" });
       res.end(successHtml());
+      req.socket.destroy();
       finish(null, { token });
     });
 
