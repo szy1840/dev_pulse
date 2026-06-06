@@ -498,6 +498,18 @@ export async function getSessionsForSummary(teamId: string, since: Date | null, 
   }));
 }
 
+/** How many sessions this user has synced into a team (all time). */
+export async function getUserSessionCount(teamId: string, userId: string): Promise<number> {
+  const admin = getAdmin();
+  const { count, error } = await admin.database
+    .from("sessions")
+    .select("id", { count: "exact", head: true })
+    .eq("team_id", teamId)
+    .eq("user_id", userId);
+  if (error) return 0;
+  return count ?? 0;
+}
+
 /** CLI tokens owned by this user within a team, newest first. */
 export async function getMyTokens(teamId: string, userId: string) {
   const admin = getAdmin();

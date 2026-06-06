@@ -20,7 +20,7 @@ export function OnboardingForm() {
     setError(null);
     startTransition(async () => {
       const res = await createTeam(teamName);
-      if (res.ok) router.push("/dashboard");
+      if (res.ok) router.push("/onboarding/cli");
       else setError(res.error);
     });
   }
@@ -29,7 +29,7 @@ export function OnboardingForm() {
     setError(null);
     startTransition(async () => {
       const res = await joinTeam(code);
-      if (res.ok) router.push("/dashboard");
+      if (res.ok) router.push("/onboarding/cli");
       else setError(res.error);
     });
   }

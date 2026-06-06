@@ -2,9 +2,11 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Activity } from "lucide-react";
 import { syncProfile, getActiveTeam, getMyTeams } from "@/lib/auth";
+import { getUserSessionCount } from "@/lib/queries";
 import { DashboardNav } from "@/components/dashboard-nav";
 import { TeamSwitcher } from "@/components/team-switcher";
 import { UserMenu } from "@/components/user-menu";
+import { CliSetupBanner } from "@/components/cli-setup-banner";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await syncProfile();
@@ -14,6 +16,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!activeTeam) redirect("/onboarding");
 
   const myTeams = await getMyTeams(user.id);
+  const mySessionCount = await getUserSessionCount(activeTeam.id, user.id);
+  const showCliBanner = mySessionCount === 0;
 
   return (
     <div className="min-h-screen">
@@ -30,7 +34,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
         <DashboardNav />
       </header>
-      <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">{children}</main>
+      <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
+        {showCliBanner && <CliSetupBanner />}
+        {children}
+      </main>
     </div>
   );
 }
