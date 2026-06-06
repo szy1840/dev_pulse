@@ -1,0 +1,37 @@
+{
+  "name": "devpulse",
+  "version": "0.1.0",
+  "description": "DevPulse AI CLI — sync local AI coding tool sessions to your team dashboard.",
+  "type": "module",
+  "bin": {
+    "devpulse": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/index.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "ai",
+    "claude-code",
+    "developer-tools",
+    "analytics",
+    "cli"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^13.1.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.5",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  }
+}
