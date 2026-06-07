@@ -1,5 +1,5 @@
 import { Activity, Clock, Cpu, Layers, Users, Wrench, FolderGit2 } from "lucide-react";
-import { requireUserId, getActiveTeam } from "@/lib/auth";
+import { requireUserId, getActiveTeam, getViewerTimezone } from "@/lib/auth";
 import {
   getTeamStats,
   getModelBreakdown,
@@ -12,7 +12,8 @@ import {
   periodStart,
   type Period,
 } from "@/lib/queries";
-import { getTeamDailySummary, getUserDailySummary, dayKey } from "@/lib/daily-summary";
+import { getTeamDailySummary, getUserDailySummary } from "@/lib/daily-summary";
+import { dayKeyInTimezone, formatDayLabel, formatTimezoneLabel } from "@/lib/timezone";
 import { formatCompact, formatNumber, formatDuration, prettyModel, prettyTool } from "@/lib/format";
 import { StatCard } from "@/components/stat-card";
 import { PeriodSelector } from "@/components/period-selector";
@@ -40,8 +41,10 @@ export default async function OverviewPage({
   if (!team) return null; // layout redirects to onboarding
 
   const period = resolvePeriod((await searchParams).period);
-  const since = periodStart(period);
+  const timeZone = await getViewerTimezone(userId);
+  const since = periodStart(period, timeZone);
   const activityGranularity = period === "today" ? "hour" : "day";
+  const todaySince = periodStart("today", timeZone);
 
   const [stats, dailyActivity, models, tools, projects, heatmap, todaySessions, todayStats, membersToday] =
     await Promise.all([
@@ -51,12 +54,13 @@ export default async function OverviewPage({
       getToolBreakdown(team.id, since),
       getProjectBreakdown(team.id, since),
       getHourlyHeatmapWithMembers(team.id, since),
-      getSessionsForSummary(team.id, periodStart("today")),
-      getTeamStats(team.id, periodStart("today")),
-      getMemberActivity(team.id, periodStart("today")),
+      getSessionsForSummary(team.id, todaySince),
+      getTeamStats(team.id, todaySince),
+      getMemberActivity(team.id, todaySince),
     ]);
 
-  const today = dayKey();
+  const today = dayKeyInTimezone(new Date(), timeZone);
+  const todayLabel = formatDayLabel(today, timeZone);
   const byUser = new Map<string, typeof todaySessions>();
   for (const s of todaySessions) {
     const list = byUser.get(s.userId) ?? [];
@@ -68,6 +72,7 @@ export default async function OverviewPage({
     team.id,
     team.name,
     today,
+    timeZone,
     todaySessions,
     todayStats.activeMembers
   );
@@ -85,6 +90,7 @@ export default async function OverviewPage({
           m.userId,
           m.name ?? "Member",
           today,
+          timeZone,
           byUser.get(m.userId) ?? []
         ),
       }))
@@ -120,6 +126,8 @@ export default async function OverviewPage({
       <TeamTodaySummary
         teamName={team.name}
         summary={teamSummary}
+        todayLabel={todayLabel}
+        timezoneLabel={formatTimezoneLabel(timeZone)}
         sessionCount={todayStats.sessionCount}
         activeMembers={todayStats.activeMembers}
         members={memberSummaries}

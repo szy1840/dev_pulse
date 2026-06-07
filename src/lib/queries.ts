@@ -1,15 +1,13 @@
 import { getAdmin } from "@/lib/insforge/admin";
+import { DEFAULT_TIMEZONE, startOfDayInTimezone } from "@/lib/timezone";
 
 export type Period = "today" | "7d" | "30d" | "all";
 
-export function periodStart(period: Period): Date | null {
+export function periodStart(period: Period, timeZone = DEFAULT_TIMEZONE): Date | null {
   const now = new Date();
   switch (period) {
-    case "today": {
-      const d = new Date(now);
-      d.setHours(0, 0, 0, 0);
-      return d;
-    }
+    case "today":
+      return startOfDayInTimezone(now, timeZone);
     case "7d":
       return new Date(now.getTime() - 7 * 24 * 3600 * 1000);
     case "30d":

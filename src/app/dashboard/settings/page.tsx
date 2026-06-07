@@ -1,15 +1,20 @@
-import { requireUserId, getActiveTeam } from "@/lib/auth";
+import { requireUserId, getActiveTeam, getViewerTimezone } from "@/lib/auth";
 import { getMyTokens } from "@/lib/queries";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { InviteCodeCard } from "@/components/invite-code-card";
 import { TokenManager } from "@/components/token-manager";
+import { TimezoneSettings } from "@/components/timezone-settings";
+import { formatTimezoneLabel } from "@/lib/timezone";
 
 export default async function SettingsPage() {
   const userId = await requireUserId();
   const team = await getActiveTeam(userId);
   if (!team) return null;
 
-  const tokens = await getMyTokens(team.id, userId);
+  const [tokens, timeZone] = await Promise.all([
+    getMyTokens(team.id, userId),
+    getViewerTimezone(userId),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -17,6 +22,19 @@ export default async function SettingsPage() {
         <h1 className="text-xl font-semibold">Settings</h1>
         <p className="text-sm text-muted-foreground">Manage your team invite and CLI tokens</p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Timezone</CardTitle>
+          <CardDescription>
+            Currently using {timeZone} ({formatTimezoneLabel(timeZone)}) for daily summaries and
+            &quot;Today&quot; filters.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TimezoneSettings currentTimezone={timeZone} />
+        </CardContent>
+      </Card>
 
       <InviteCodeCard teamName={team.name} inviteCode={team.inviteCode} />
 

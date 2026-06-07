@@ -1,8 +1,10 @@
 import { cookies } from "next/headers";
 import { createInsForgeServerClient } from "@/lib/insforge/server";
 import { getAdmin } from "@/lib/insforge/admin";
+import { DEFAULT_TIMEZONE, isValidTimezone } from "@/lib/timezone";
 
 const ACTIVE_TEAM_COOKIE = "dp_active_team";
+export const TIMEZONE_COOKIE = "dp_timezone";
 
 export type AppUser = {
   id: string;
@@ -112,6 +114,32 @@ export async function requireMembership(userId: string, teamId: string): Promise
 
   if (error || !data) throw new Error("Not a member of this team");
   return (data as { role: string }).role;
+}
+
+/** Profile timezone, or null when the user has not chosen one yet. */
+export async function getProfileTimezone(userId: string): Promise<string | null> {
+  const admin = getAdmin();
+  const { data } = await admin.database
+    .from("profiles")
+    .select("timezone")
+    .eq("id", userId)
+    .maybeSingle();
+  const tz = (data as { timezone: string | null } | null)?.timezone ?? null;
+  return tz && isValidTimezone(tz) ? tz : null;
+}
+
+/**
+ * Timezone for dashboard "today" calculations: saved profile value, then
+ * browser cookie from TimezoneBootstrap, then UTC.
+ */
+export async function getViewerTimezone(userId: string): Promise<string> {
+  const saved = await getProfileTimezone(userId);
+  if (saved) return saved;
+
+  const cookieTz = (await cookies()).get(TIMEZONE_COOKIE)?.value;
+  if (cookieTz && isValidTimezone(cookieTz)) return cookieTz;
+
+  return DEFAULT_TIMEZONE;
 }
 
 export { ACTIVE_TEAM_COOKIE };

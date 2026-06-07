@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { clearAuthCookies } from "@insforge/sdk/ssr";
 import { getAdmin } from "@/lib/insforge/admin";
-import { requireUserId, syncProfile, requireMembership, ACTIVE_TEAM_COOKIE } from "@/lib/auth";
+import { requireUserId, syncProfile, requireMembership, ACTIVE_TEAM_COOKIE, TIMEZONE_COOKIE } from "@/lib/auth";
+import { isValidTimezone } from "@/lib/timezone";
 import { newInviteCode } from "@/lib/ids";
 import { createCliTokenForUser } from "@/lib/create-cli-token";
 
@@ -125,4 +126,53 @@ export async function revokeToken(tokenId: string): Promise<ActionResult> {
 export async function signOut(): Promise<void> {
   clearAuthCookies(await cookies());
   (await cookies()).delete(ACTIVE_TEAM_COOKIE);
+  (await cookies()).delete(TIMEZONE_COOKIE);
+}
+
+const TIMEZONE_COOKIE_OPTS = { path: "/", maxAge: 60 * 60 * 24 * 365 };
+
+/** Persist the viewer timezone and refresh dashboard caches. */
+export async function updateTimezone(timeZone: string): Promise<ActionResult> {
+  const userId = await requireUserId();
+  if (!isValidTimezone(timeZone)) return { ok: false, error: "Invalid timezone." };
+
+  const admin = getAdmin();
+  const { error } = await admin.database
+    .from("profiles")
+    .update({ timezone: timeZone, updated_at: new Date().toISOString() })
+    .eq("id", userId);
+  if (error) return { ok: false, error: "Could not save timezone." };
+
+  (await cookies()).set(TIMEZONE_COOKIE, timeZone, TIMEZONE_COOKIE_OPTS);
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+/**
+ * Set the timezone cookie on first dashboard visit and save to profile when unset.
+ * Called from TimezoneBootstrap on the client.
+ */
+export async function ensureTimezone(timeZone: string): Promise<ActionResult> {
+  const userId = await requireUserId();
+  if (!isValidTimezone(timeZone)) return { ok: false, error: "Invalid timezone." };
+
+  (await cookies()).set(TIMEZONE_COOKIE, timeZone, TIMEZONE_COOKIE_OPTS);
+
+  const admin = getAdmin();
+  const { data } = await admin.database
+    .from("profiles")
+    .select("timezone")
+    .eq("id", userId)
+    .maybeSingle();
+  const saved = (data as { timezone: string | null } | null)?.timezone;
+  if (saved && isValidTimezone(saved)) return { ok: true };
+
+  const { error } = await admin.database
+    .from("profiles")
+    .update({ timezone: timeZone, updated_at: new Date().toISOString() })
+    .eq("id", userId);
+  if (error) return { ok: false, error: "Could not save timezone." };
+
+  revalidatePath("/dashboard");
+  return { ok: true };
 }

@@ -1,25 +1,26 @@
-import { format } from "date-fns";
 import { Sparkles, Users, Activity } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { TeamTodayMembersExpand, type TeamMemberToday } from "@/components/team-today-members-expand";
-import { dayKey } from "@/lib/daily-summary";
 
 export function TeamTodaySummary({
   teamName,
   summary,
+  todayLabel,
+  timezoneLabel,
   sessionCount,
   activeMembers,
   members = [],
 }: {
   teamName: string;
   summary: string;
+  todayLabel: string;
+  timezoneLabel?: string;
   sessionCount: number;
   activeMembers: number;
   members?: TeamMemberToday[];
 }) {
-  const todayLabel = format(new Date(`${dayKey()}T12:00:00`), "EEEE, MMM d");
   const isEmpty = sessionCount === 0;
 
   return (
@@ -49,7 +50,8 @@ export function TeamTodaySummary({
               <div className="space-y-0.5">
                 <h2 className="text-base font-semibold tracking-tight">Today&apos;s team summary</h2>
                 <p className="text-xs text-muted-foreground">
-                  {todayLabel} · {teamName}
+                  {todayLabel}
+                  {timezoneLabel ? ` (${timezoneLabel})` : ""} · {teamName}
                 </p>
               </div>
 

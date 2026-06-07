@@ -1,13 +1,11 @@
 import { getAdmin } from "./insforge/admin";
 import { generateUserDaily, generateUserToolDaily, generateTeamDaily, isStoredSummaryFresh } from "./ai-summary";
 import type { SessionLike } from "./summary";
+import { dayKeyInTimezone, DEFAULT_TIMEZONE } from "./timezone";
 
-/** Local YYYY-MM-DD, matching the dashboard's local "today" window. */
+/** @deprecated Use dayKeyInTimezone from ./timezone */
 export function dayKey(d = new Date()): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  return dayKeyInTimezone(d, DEFAULT_TIMEZONE);
 }
 
 type StoredRow = { summary: string; session_count: number; model: string | null };
@@ -17,6 +15,7 @@ async function getStored(
   scope: "user" | "team",
   scopeId: string,
   day: string,
+  timeZone: string,
   tool = ""
 ): Promise<StoredRow | null> {
   const admin = getAdmin();
@@ -28,6 +27,7 @@ async function getStored(
     .eq("scope_id", scopeId)
     .eq("day", day)
     .eq("tool", tool)
+    .eq("timezone", timeZone)
     .maybeSingle();
   return (data as StoredRow | null) ?? null;
 }
@@ -37,6 +37,7 @@ async function store(
   scope: "user" | "team",
   scopeId: string,
   day: string,
+  timeZone: string,
   summary: string,
   model: string | null,
   sessionCount: number,
@@ -44,8 +45,20 @@ async function store(
 ) {
   const admin = getAdmin();
   const { error } = await admin.database.from("daily_summaries").upsert(
-    [{ team_id: teamId, scope, scope_id: scopeId, day, tool, summary, model, session_count: sessionCount }],
-    { onConflict: "team_id,scope,scope_id,day,tool" }
+    [
+      {
+        team_id: teamId,
+        scope,
+        scope_id: scopeId,
+        day,
+        tool,
+        timezone: timeZone,
+        summary,
+        model,
+        session_count: sessionCount,
+      },
+    ],
+    { onConflict: "team_id,scope,scope_id,day,tool,timezone" }
   );
   if (error) console.error("daily_summaries upsert failed", error);
 }
@@ -62,14 +75,15 @@ export async function getTeamDailySummary(
   teamId: string,
   teamName: string,
   day: string,
+  timeZone: string,
   sessions: SessionLike[],
   activeMembers: number
 ): Promise<string> {
-  const existing = await getStored(teamId, "team", teamId, day);
+  const existing = await getStored(teamId, "team", teamId, day, timeZone);
   if (existing && isFresh(existing, sessions.length)) return existing.summary;
 
   const { text, model } = await generateTeamDaily(teamName, sessions, activeMembers);
-  await store(teamId, "team", teamId, day, text, model, sessions.length);
+  await store(teamId, "team", teamId, day, timeZone, text, model, sessions.length);
   return text;
 }
 
@@ -79,13 +93,14 @@ export async function getUserDailySummary(
   userId: string,
   name: string,
   day: string,
+  timeZone: string,
   sessions: SessionLike[]
 ): Promise<string> {
-  const existing = await getStored(teamId, "user", userId, day);
+  const existing = await getStored(teamId, "user", userId, day, timeZone);
   if (existing && isFresh(existing, sessions.length)) return existing.summary;
 
   const { text, model } = await generateUserDaily(name, sessions);
-  await store(teamId, "user", userId, day, text, model, sessions.length);
+  await store(teamId, "user", userId, day, timeZone, text, model, sessions.length);
   return text;
 }
 
@@ -96,13 +111,14 @@ export async function getUserToolDailySummary(
   name: string,
   tool: string,
   day: string,
+  timeZone: string,
   sessions: SessionLike[]
 ): Promise<string> {
-  const existing = await getStored(teamId, "user", userId, day, tool);
+  const existing = await getStored(teamId, "user", userId, day, timeZone, tool);
   if (existing && isFresh(existing, sessions.length)) return existing.summary;
 
   const { text, model } = await generateUserToolDaily(name, tool, sessions);
-  await store(teamId, "user", userId, day, text, model, sessions.length, tool);
+  await store(teamId, "user", userId, day, timeZone, text, model, sessions.length, tool);
   return text;
 }
 
@@ -123,6 +139,7 @@ export async function getUserTodaySummaries(
   userId: string,
   name: string,
   day: string,
+  timeZone: string,
   sessions: SessionLike[]
 ): Promise<UserTodaySummaries> {
   const byToolMap = new Map<string, SessionLike[]>();
@@ -137,9 +154,9 @@ export async function getUserTodaySummaries(
   );
 
   const [overall, ...toolSummaries] = await Promise.all([
-    getUserDailySummary(teamId, userId, name, day, sessions),
+    getUserDailySummary(teamId, userId, name, day, timeZone, sessions),
     ...tools.map((tool) =>
-      getUserToolDailySummary(teamId, userId, name, tool, day, byToolMap.get(tool) ?? [])
+      getUserToolDailySummary(teamId, userId, name, tool, day, timeZone, byToolMap.get(tool) ?? [])
     ),
   ]);
 

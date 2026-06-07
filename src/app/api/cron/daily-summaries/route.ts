@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAdmin } from "@/lib/insforge/admin";
 import { getSessionsForSummary, periodStart } from "@/lib/queries";
-import { getTeamDailySummary, getUserDailySummary, dayKey } from "@/lib/daily-summary";
+import { getTeamDailySummary, getUserDailySummary } from "@/lib/daily-summary";
+import { dayKeyInTimezone, DEFAULT_TIMEZONE } from "@/lib/timezone";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -23,8 +24,9 @@ export async function POST(req: Request) {
   const { data: teamData } = await admin.database.from("teams").select("id, name");
   const teams = (teamData as { id: string; name: string }[] | null) ?? [];
 
-  const today = dayKey();
-  const since = periodStart("today");
+  const timeZone = DEFAULT_TIMEZONE;
+  const today = dayKeyInTimezone(new Date(), timeZone);
+  const since = periodStart("today", timeZone);
   let teamsDone = 0;
   let usersDone = 0;
 
@@ -32,7 +34,7 @@ export async function POST(req: Request) {
     const sessions = await getSessionsForSummary(team.id, since);
     const activeMembers = new Set(sessions.map((s) => s.userId)).size;
 
-    await getTeamDailySummary(team.id, team.name, today, sessions, activeMembers);
+    await getTeamDailySummary(team.id, team.name, today, timeZone, sessions, activeMembers);
     teamsDone++;
 
     // Per active member for the day.
@@ -51,7 +53,7 @@ export async function POST(req: Request) {
     );
 
     for (const [userId, userSessions] of byUser) {
-      await getUserDailySummary(team.id, userId, names.get(userId) ?? "Member", today, userSessions);
+      await getUserDailySummary(team.id, userId, names.get(userId) ?? "Member", today, timeZone, userSessions);
       usersDone++;
     }
   }

@@ -1,8 +1,9 @@
 import { formatDistanceToNow } from "date-fns";
 import { Users, Coins } from "lucide-react";
-import { requireUserId, getActiveTeam } from "@/lib/auth";
+import { requireUserId, getActiveTeam, getViewerTimezone } from "@/lib/auth";
 import { getMemberActivity, getSessionsForSummary, periodStart, type Period } from "@/lib/queries";
-import { getUserTodaySummaries, dayKey } from "@/lib/daily-summary";
+import { getUserTodaySummaries } from "@/lib/daily-summary";
+import { dayKeyInTimezone } from "@/lib/timezone";
 import { MemberTodayPanel } from "@/components/member-today-panel";
 import { formatCompact, formatNumber } from "@/lib/format";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,9 +29,11 @@ export default async function MembersPage({
   if (!team) return null;
 
   const period = resolvePeriod((await searchParams).period);
+  const timeZone = await getViewerTimezone(userId);
+  const todaySince = periodStart("today", timeZone);
   const [members, todaySessions] = await Promise.all([
-    getMemberActivity(team.id, periodStart(period)),
-    getSessionsForSummary(team.id, periodStart("today")),
+    getMemberActivity(team.id, periodStart(period, timeZone)),
+    getSessionsForSummary(team.id, todaySince),
   ]);
 
   // Group today's sessions per user for the per-member daily summary line.
@@ -42,7 +45,7 @@ export default async function MembersPage({
   }
 
   // Generate (or read cached) today's per-member summaries in parallel.
-  const today = dayKey();
+  const today = dayKeyInTimezone(new Date(), timeZone);
   const todaySummaries = new Map(
     await Promise.all(
       members.map(async (m) => [
@@ -52,6 +55,7 @@ export default async function MembersPage({
           m.userId,
           m.name ?? "This member",
           today,
+          timeZone,
           byUser.get(m.userId) ?? []
         ),
       ] as const)
