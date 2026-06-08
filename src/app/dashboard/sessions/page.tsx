@@ -18,6 +18,7 @@ import { PeriodSelector } from "@/components/period-selector";
 import { ChartCard } from "@/components/charts/chart-card";
 import { DonutChart } from "@/components/charts/donut-chart";
 import { RadialChart } from "@/components/charts/radial-chart";
+import { isUnknownLabel, UnknownValue } from "@/components/unknown-hint";
 
 function resolvePeriod(raw?: string): Period {
   return raw === "7d" || raw === "30d" || raw === "all" || raw === "today" ? raw : "7d";
@@ -91,6 +92,7 @@ export default async function SessionsPage({
               <TableBody>
                 {rows.map((s) => {
                   const tokens = s.inputTokens + s.outputTokens;
+                  const modelLabel = prettyModel(s.model);
                   const duration =
                     s.startedAt && s.endedAt
                       ? s.endedAt.getTime() - s.startedAt.getTime()
@@ -104,7 +106,9 @@ export default async function SessionsPage({
                         </div>
                       </TableCell>
                       <TableCell className="max-w-[140px]">
-                        <span className="text-sm font-medium">{s.projectName ?? "Unknown"}</span>
+                        <span className="text-sm font-medium">
+                          {s.projectName ? s.projectName : <UnknownValue />}
+                        </span>
                       </TableCell>
                       <TableCell className="max-w-md">
                         <p className="text-sm leading-snug text-muted-foreground">
@@ -119,7 +123,9 @@ export default async function SessionsPage({
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{prettyModel(s.model)}</Badge>
+                        <Badge variant="outline">
+                          {isUnknownLabel(modelLabel) ? <UnknownValue /> : modelLabel}
+                        </Badge>
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{formatCompact(tokens)}</TableCell>
                       <TableCell className="text-right tabular-nums text-muted-foreground">

@@ -2,6 +2,7 @@
 
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { formatNumber } from "@/lib/format";
+import { isUnknownLabel, UnknownValue } from "@/components/unknown-hint";
 import { colorAt } from "./chart-theme";
 import { TooltipCard } from "./chart-tooltip";
 import { ChartClientOnly } from "./chart-client-only";
@@ -81,7 +82,9 @@ export function DonutChart({
           return (
             <li key={s.name} className="flex items-center gap-2 text-sm">
               <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colorAt(i) }} />
-              <span className="truncate">{s.name}</span>
+              <span className="min-w-0 truncate">
+                {isUnknownLabel(s.name) ? <UnknownValue /> : s.name}
+              </span>
               <span className="ml-auto shrink-0 tabular-nums text-muted-foreground">
                 {formatNumber(s.value)}
                 {unit} · {pct}%
