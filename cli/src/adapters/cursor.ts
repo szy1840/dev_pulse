@@ -12,6 +12,8 @@ import {
   indexAgentTranscripts,
   type SqliteDb,
 } from "./cursor-sources.js";
+import { aggregateBubbleStats, resolveSessionModel } from "../cursor-api/bubble-stats.js";
+import { buildApiUsageSessions } from "../cursor-api/usage-sessions.js";
 
 const TOOL = "cursor";
 const require = createRequire(import.meta.url);
@@ -36,22 +38,14 @@ interface CodeRow {
   timestamp: number | null;
 }
 
-function mostFrequent(values: string[]): string | null {
-  if (values.length === 0) return null;
-  const counts = new Map<string, number>();
-  for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1);
-  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
-}
-
 /**
- * Cursor session metadata from local stores:
- * - ai-code-tracking.db — files, models, timestamps (no prompts)
- * - state.vscdb — composer titles + user bubble text
- * - agent-transcripts/*.jsonl — first user query per session
- *
- * Token usage is not available locally (Cursor API only).
+ * Cursor sessions from local stores + optional API usage cache:
+ * - ai-code-tracking.db — composer sessions (files, timestamps)
+ * - state.vscdb — titles, user text, bubble tokenCount / modelInfo
+ * - agent-transcripts/*.jsonl — user queries for summary
+ * - ~/.devpulse/cursor-cache/ or tokscale cache — official billing tokens (API)
  */
-function buildCursorSessions(): { metadata: SessionMetadata; fingerprint: string }[] {
+function buildComposerSessions(): { metadata: SessionMetadata; fingerprint: string }[] {
   const sqlite = loadSqlite();
   const dbPath = cursorDbPath();
   if (!sqlite || !existsSync(dbPath)) return [];
@@ -85,11 +79,15 @@ function buildCursorSessions(): { metadata: SessionMetadata; fingerprint: string
       .all() as unknown as CodeRow[];
 
     const trackingTitles = new Map<string, string>();
+    const summaryModels = new Map<string, string>();
     try {
       for (const r of db
-        .prepare(`SELECT conversationId, title FROM conversation_summaries WHERE title IS NOT NULL`)
-        .all() as unknown as { conversationId: string; title: string }[]) {
-        trackingTitles.set(r.conversationId, r.title);
+        .prepare(
+          `SELECT conversationId, title, model FROM conversation_summaries WHERE conversationId IS NOT NULL`
+        )
+        .all() as unknown as { conversationId: string; title: string | null; model: string | null }[]) {
+        if (r.title) trackingTitles.set(r.conversationId, r.title);
+        if (r.model) summaryModels.set(r.conversationId, r.model);
       }
     } catch {
       /* optional table */
@@ -122,7 +120,8 @@ function buildCursorSessions(): { metadata: SessionMetadata; fingerprint: string
     const out: { metadata: SessionMetadata; fingerprint: string }[] = [];
     for (const [convId, a] of byConv) {
       const files = [...a.files];
-      const messageCount = a.requestIds.size || a.hashes;
+      const bubble = stateDb ? aggregateBubbleStats(stateDb, convId) : null;
+      const messageCount = Math.max(a.requestIds.size || a.hashes, bubble?.messageCount ?? 0);
       const projectName = guessProjectName(files);
       const { summary, summaryNotes } = buildCursorSummary({
         conversationId: convId,
@@ -133,19 +132,28 @@ function buildCursorSessions(): { metadata: SessionMetadata; fingerprint: string
         transcriptPath: transcripts.get(convId) ?? null,
       });
 
+      const model = resolveSessionModel(
+        a.models,
+        bubble?.models ?? [],
+        summaryModels.get(convId) ?? null
+      );
+
+      const inputTokens = bubble?.inputTokens ?? 0;
+      const outputTokens = bubble?.outputTokens ?? 0;
+
       out.push({
-        fingerprint: `${a.hashes}:${a.t1 ?? 0}:${CURSOR_SUMMARY_VERSION}`,
+        fingerprint: `${a.hashes}:${inputTokens}:${outputTokens}:${a.t1 ?? 0}:${CURSOR_SUMMARY_VERSION}`,
         metadata: {
           externalId: `${TOOL}:${convId}`,
           tool: TOOL,
-          model: mostFrequent(a.models),
+          model,
           projectPathHash: null,
           projectName,
           summary,
           summaryNotes,
           messageCount,
-          inputTokens: 0,
-          outputTokens: 0,
+          inputTokens,
+          outputTokens,
           cacheReadTokens: 0,
           cacheCreationTokens: 0,
           startedAt: a.t0 ? new Date(a.t0).toISOString() : null,
@@ -170,16 +178,21 @@ function buildCursorSessions(): { metadata: SessionMetadata; fingerprint: string
   }
 }
 
+function buildAllCursorSessions(): { metadata: SessionMetadata; fingerprint: string }[] {
+  return [...buildComposerSessions(), ...buildApiUsageSessions()];
+}
+
 export const cursorAdapter: ToolAdapter = {
   tool: TOOL,
   label: "Cursor",
 
   available() {
-    return loadSqlite() !== null && existsSync(cursorDbPath());
+    if (loadSqlite() === null) return false;
+    return existsSync(cursorDbPath()) || buildApiUsageSessions().length > 0;
   },
 
   discover(): DiscoveredSession[] {
-    return buildCursorSessions().map(({ metadata, fingerprint }) => ({
+    return buildAllCursorSessions().map(({ metadata, fingerprint }) => ({
       stateKey: metadata.externalId,
       fingerprint,
       load: () => metadata,

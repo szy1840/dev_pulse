@@ -4,8 +4,19 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { buildSessionSummary } from "../summary.js";
 import { buildSummaryNotes } from "../session-notes.js";
 
-/** Bump when summary derivation changes so existing sessions re-sync once. */
-export const CURSOR_SUMMARY_VERSION = "v3";
+/** Bump when summary derivation or token/model logic changes so sessions re-sync once. */
+export const CURSOR_SUMMARY_VERSION = "v4";
+
+/** Map Cursor internal model placeholders to friendlier ids. */
+export function normalizeCursorModel(model: string | null | undefined): string | null {
+  if (!model) return null;
+  const m = model.trim();
+  if (!m) return null;
+  const lower = m.toLowerCase();
+  if (lower === "default") return "cursor-auto";
+  if (lower === "premium") return "cursor-premium";
+  return m;
+}
 
 export interface SqliteDb {
   prepare(sql: string): {

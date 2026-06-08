@@ -4,6 +4,13 @@ import { login } from "./commands/login.js";
 import { sync } from "./commands/sync.js";
 import { status } from "./commands/status.js";
 import { scheduleInstall, scheduleRemove, scheduleStatus } from "./commands/schedule.js";
+import {
+  cursorLogin,
+  cursorLogout,
+  cursorStatus,
+  cursorSwitch,
+  cursorSync,
+} from "./commands/cursor.js";
 import { ui } from "./ui.js";
 
 const program = new Command();
@@ -59,6 +66,39 @@ schedule
   .command("remove")
   .description("Uninstall automatic background sync.")
   .action(scheduleRemove);
+
+const cursor = program
+  .command("cursor")
+  .description("Cursor Dashboard API — optional login for official token/cost usage.");
+
+cursor
+  .command("login")
+  .description("Save WorkosCursorSessionToken for Cursor usage API (like tokscale).")
+  .option("--name <label>", "Account label, e.g. work")
+  .option("--token <token>", "Session token (skip prompt)")
+  .action(cursorLogin);
+
+cursor
+  .command("sync")
+  .description("Download usage CSV to ~/.devpulse/cursor-cache/usage.csv")
+  .option("--json", "Print result as JSON")
+  .action(cursorSync);
+
+cursor
+  .command("status")
+  .description("Show Cursor API login and cache status.")
+  .action(cursorStatus);
+
+cursor
+  .command("switch <name>")
+  .description("Set the active Cursor account by label or id.")
+  .action(cursorSwitch);
+
+cursor
+  .command("logout")
+  .description("Remove saved Cursor credentials.")
+  .option("--purge-cache", "Also delete ~/.devpulse/cursor-cache/")
+  .action(cursorLogout);
 
 program.parseAsync(process.argv).catch((err) => {
   ui.error(err instanceof Error ? err.message : String(err));
