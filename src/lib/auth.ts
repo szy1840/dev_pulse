@@ -23,7 +23,20 @@ export type MyTeam = {
 
 /** Resolve the signed-in InsForge user from the request cookies, or null. */
 export async function getCurrentUser(): Promise<AppUser | null> {
-  const client = await createInsForgeServerClient();
+  let client: Awaited<ReturnType<typeof createInsForgeServerClient>>;
+  try {
+    client = await createInsForgeServerClient();
+  } catch (error) {
+    if (
+      process.env.NODE_ENV !== "production" &&
+      error instanceof Error &&
+      error.message.includes("Missing InsForge baseUrl or anonKey")
+    ) {
+      return null;
+    }
+    throw error;
+  }
+
   const { data, error } = await client.auth.getCurrentUser();
   if (error || !data?.user) return null;
 
