@@ -5,7 +5,7 @@ import { buildSessionSummary } from "../summary.js";
 import { buildSummaryNotes } from "../session-notes.js";
 
 /** Bump when summary derivation or token/model logic changes so sessions re-sync once. */
-export const CURSOR_SUMMARY_VERSION = "v4";
+export const CURSOR_SUMMARY_VERSION = "v5";
 
 /** Map Cursor internal model placeholders to friendlier ids. */
 export function normalizeCursorModel(model: string | null | undefined): string | null {

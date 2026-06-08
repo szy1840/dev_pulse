@@ -1,5 +1,6 @@
 import { getAdmin } from "@/lib/insforge/admin";
 import { DEFAULT_TIMEZONE, startOfDayInTimezone } from "@/lib/timezone";
+import { computeTeamActivityStats, computeUserActivityStats } from "@/lib/activity";
 
 export type Period = "today" | "7d" | "30d" | "all";
 
@@ -21,6 +22,7 @@ export function periodStart(period: Period, timeZone = DEFAULT_TIMEZONE): Date |
 type SessionRow = {
   id: string;
   user_id: string;
+  external_id: string;
   tool: string;
   model: string | null;
   project_name: string | null;
@@ -32,10 +34,12 @@ type SessionRow = {
   cache_creation_tokens: number;
   started_at: string | null;
   ended_at: string | null;
+  engaged_ms: number;
+  activity_intervals: unknown;
 };
 
 const SESSION_COLUMNS =
-  "id, user_id, tool, model, project_name, summary, message_count, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, started_at, ended_at";
+  "id, user_id, external_id, tool, model, project_name, summary, message_count, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, started_at, ended_at, engaged_ms, activity_intervals";
 
 /** Fetch every session for a team within an optional time window. */
 async function fetchTeamSessions(teamId: string, since: Date | null): Promise<SessionRow[]> {
@@ -76,7 +80,6 @@ export async function getTeamStats(teamId: string, since: Date | null) {
   let cacheReadTokens = 0;
   let cacheCreationTokens = 0;
   let messageCount = 0;
-  let activeMs = 0;
   for (const r of rows) {
     members.add(r.user_id);
     inputTokens += r.input_tokens;
@@ -84,10 +87,10 @@ export async function getTeamStats(teamId: string, since: Date | null) {
     cacheReadTokens += r.cache_read_tokens;
     cacheCreationTokens += r.cache_creation_tokens;
     messageCount += r.message_count;
-    const start = toDate(r.started_at);
-    const end = toDate(r.ended_at);
-    if (start && end && end > start) activeMs += end.getTime() - start.getTime();
   }
+
+  const activity = computeTeamActivityStats(rows, (r) => r.user_id);
+
   return {
     sessionCount: rows.length,
     inputTokens,
@@ -95,7 +98,10 @@ export async function getTeamStats(teamId: string, since: Date | null) {
     cacheReadTokens,
     cacheCreationTokens,
     messageCount,
-    activeMs,
+    activeMs: activity.activeMs,
+    sessionEngagedMs: activity.sessionEngagedMs,
+    peakConcurrency: activity.peakConcurrency,
+    parallelFactor: activity.parallelFactor,
     activeMembers: members.size,
   };
 }
@@ -399,7 +405,13 @@ export async function getMemberActivity(teamId: string, since: Date | null) {
   // Aggregate sessions per user.
   const agg = new Map<
     string,
-    { sessionCount: number; tokens: number; lastActive: Date | null; tools: Map<string, number> }
+    {
+      sessionCount: number;
+      tokens: number;
+      lastActive: Date | null;
+      tools: Map<string, number>;
+      sessions: SessionRow[];
+    }
   >();
   for (const s of sessions) {
     const cur = agg.get(s.user_id) ?? {
@@ -407,10 +419,12 @@ export async function getMemberActivity(teamId: string, since: Date | null) {
       tokens: 0,
       lastActive: null,
       tools: new Map<string, number>(),
+      sessions: [],
     };
     cur.sessionCount += 1;
     cur.tokens += s.input_tokens + s.output_tokens;
     cur.tools.set(s.tool, (cur.tools.get(s.tool) ?? 0) + 1);
+    cur.sessions.push(s);
     const started = toDate(s.started_at);
     if (started && (!cur.lastActive || started > cur.lastActive)) cur.lastActive = started;
     agg.set(s.user_id, cur);
@@ -424,10 +438,12 @@ export async function getMemberActivity(teamId: string, since: Date | null) {
         tokens: 0,
         lastActive: null,
         tools: new Map<string, number>(),
+        sessions: [],
       };
       const toolBreakdown = [...a.tools.entries()]
         .map(([tool, count]) => ({ tool, count }))
         .sort((x, y) => y.count - x.count);
+      const activity = computeUserActivityStats(a.sessions);
       return {
         userId: m.user_id,
         name: profile?.name ?? null,
@@ -438,6 +454,9 @@ export async function getMemberActivity(teamId: string, since: Date | null) {
         tokens: a.tokens,
         lastActive: a.lastActive,
         toolBreakdown,
+        activeMs: activity.activeMs,
+        peakConcurrency: activity.peakConcurrency,
+        parallelFactor: activity.parallelFactor,
       };
     })
     .sort((a, b) => b.sessionCount - a.sessionCount);
@@ -472,6 +491,7 @@ export async function getRecentSessions(teamId: string, since: Date | null, limi
     messageCount: s.message_count,
     inputTokens: s.input_tokens,
     outputTokens: s.output_tokens,
+    engagedMs: s.engaged_ms,
     startedAt: toDate(s.started_at),
     endedAt: toDate(s.ended_at),
     userName: profilesById.get(s.user_id)?.name ?? null,

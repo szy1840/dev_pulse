@@ -3,7 +3,7 @@ import { cacheWriteTokens, type CursorUsageRow, parseCursorCsv } from "./parse-c
 import { readAllUsageRows, usageCacheFingerprint } from "./sync-cache.js";
 import { hasUsageCache } from "./paths.js";
 
-const API_SUMMARY_VERSION = "v1";
+const API_SUMMARY_VERSION = "v2";
 
 function slugifyModel(model: string): string {
   return model
@@ -86,6 +86,8 @@ export function buildApiUsageSessions(): { metadata: SessionMetadata; fingerprin
         cacheCreationTokens: agg.cacheCreationTokens,
         startedAt: agg.t0 ? new Date(agg.t0).toISOString() : `${agg.date}T00:00:00.000Z`,
         endedAt: agg.t1 ? new Date(agg.t1).toISOString() : `${agg.date}T23:59:59.999Z`,
+        engagedMs: 0,
+        activityIntervals: [],
       },
     });
   }

@@ -91,10 +91,7 @@ export default async function SessionsPage({
               <TableBody>
                 {rows.map((s) => {
                   const tokens = s.inputTokens + s.outputTokens;
-                  const duration =
-                    s.startedAt && s.endedAt
-                      ? s.endedAt.getTime() - s.startedAt.getTime()
-                      : 0;
+                  const duration = s.engagedMs > 0 ? s.engagedMs : 0;
                   return (
                     <TableRow key={s.id}>
                       <TableCell>

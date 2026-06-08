@@ -15,6 +15,10 @@ export interface SessionMetadata {
   cacheCreationTokens: number;
   startedAt: string | null; // ISO
   endedAt: string | null; // ISO
+  /** Milliseconds of active bursts within this session (idle gaps removed). */
+  engagedMs: number;
+  /** Burst intervals used for per-user union and concurrency stats. */
+  activityIntervals: { start: string; end: string }[];
 }
 
 /** A parsed session plus the source file fingerprint used for dedupe. */

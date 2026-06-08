@@ -5,7 +5,7 @@ import { getMemberActivity, getSessionsForSummary, periodStart, type Period } fr
 import { getUserTodaySummaries } from "@/lib/daily-summary";
 import { dayKeyInTimezone } from "@/lib/timezone";
 import { MemberTodayPanel } from "@/components/member-today-panel";
-import { formatCompact, formatNumber } from "@/lib/format";
+import { formatCompact, formatNumber, formatDuration, formatActivityHint } from "@/lib/format";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -129,6 +129,14 @@ export default async function MembersPage({
               <div className="flex flex-wrap gap-6 text-sm">
                 <Stat label="Sessions" value={formatNumber(m.sessionCount)} />
                 <Stat label="Tokens" value={formatCompact(m.tokens)} />
+                <Stat label="Active time" value={formatDuration(m.activeMs)} />
+                {m.peakConcurrency > 1 && (
+                  <Stat
+                    label="Peak concurrent"
+                    value={String(m.peakConcurrency)}
+                    hint={formatActivityHint(m.peakConcurrency, m.parallelFactor)}
+                  />
+                )}
               </div>
               {m.toolBreakdown.length > 0 && (
                 <div className="flex flex-wrap items-center gap-2">
@@ -153,11 +161,12 @@ export default async function MembersPage({
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div>
       <div className="text-lg font-semibold tabular-nums">{value}</div>
       <div className="text-xs text-muted-foreground">{label}</div>
+      {hint ? <div className="text-xs text-muted-foreground/80">{hint}</div> : null}
     </div>
   );
 }

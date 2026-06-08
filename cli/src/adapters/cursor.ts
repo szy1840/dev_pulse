@@ -14,6 +14,7 @@ import {
 } from "./cursor-sources.js";
 import { aggregateBubbleStats, resolveSessionModel } from "../cursor-api/bubble-stats.js";
 import { buildApiUsageSessions } from "../cursor-api/usage-sessions.js";
+import { buildActivityFromEvents } from "../activity.js";
 
 const TOOL = "cursor";
 const require = createRequire(import.meta.url);
@@ -98,21 +99,19 @@ function buildComposerSessions(): { metadata: SessionMetadata; fingerprint: stri
       requestIds: Set<string>;
       files: Set<string>;
       hashes: number;
-      t0: number | null;
-      t1: number | null;
+      eventTimes: number[];
     };
     const byConv = new Map<string, Agg>();
     for (const r of rows) {
       const a =
         byConv.get(r.conversationId) ??
-        { models: [], requestIds: new Set(), files: new Set(), hashes: 0, t0: null, t1: null };
+        { models: [], requestIds: new Set(), files: new Set(), hashes: 0, eventTimes: [] };
       a.hashes++;
       if (r.model) a.models.push(r.model);
       if (r.requestId) a.requestIds.add(r.requestId);
       if (r.fileName) a.files.add(r.fileName);
-      if (typeof r.timestamp === "number") {
-        a.t0 = a.t0 === null ? r.timestamp : Math.min(a.t0, r.timestamp);
-        a.t1 = a.t1 === null ? r.timestamp : Math.max(a.t1, r.timestamp);
+      if (typeof r.timestamp === "number" && r.timestamp > 0) {
+        a.eventTimes.push(r.timestamp);
       }
       byConv.set(r.conversationId, a);
     }
@@ -140,9 +139,10 @@ function buildComposerSessions(): { metadata: SessionMetadata; fingerprint: stri
 
       const inputTokens = bubble?.inputTokens ?? 0;
       const outputTokens = bubble?.outputTokens ?? 0;
+      const activity = buildActivityFromEvents(a.eventTimes);
 
       out.push({
-        fingerprint: `${a.hashes}:${inputTokens}:${outputTokens}:${a.t1 ?? 0}:${CURSOR_SUMMARY_VERSION}`,
+        fingerprint: `${a.hashes}:${inputTokens}:${outputTokens}:${activity.engagedMs}:${CURSOR_SUMMARY_VERSION}`,
         metadata: {
           externalId: `${TOOL}:${convId}`,
           tool: TOOL,
@@ -156,8 +156,10 @@ function buildComposerSessions(): { metadata: SessionMetadata; fingerprint: stri
           outputTokens,
           cacheReadTokens: 0,
           cacheCreationTokens: 0,
-          startedAt: a.t0 ? new Date(a.t0).toISOString() : null,
-          endedAt: a.t1 ? new Date(a.t1).toISOString() : null,
+          startedAt: activity.startedAt,
+          endedAt: activity.endedAt,
+          engagedMs: activity.engagedMs,
+          activityIntervals: activity.activityIntervals,
         },
       });
     }

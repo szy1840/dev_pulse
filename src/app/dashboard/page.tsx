@@ -14,7 +14,7 @@ import {
 } from "@/lib/queries";
 import { getTeamDailySummary, getUserDailySummary } from "@/lib/daily-summary";
 import { dayKeyInTimezone, formatDayLabel, formatTimezoneLabel } from "@/lib/timezone";
-import { formatCompact, formatNumber, formatDuration, prettyModel, prettyTool } from "@/lib/format";
+import { formatCompact, formatNumber, formatDuration, formatActivityHint, prettyModel, prettyTool } from "@/lib/format";
 import { StatCard } from "@/components/stat-card";
 import { PeriodSelector } from "@/components/period-selector";
 import { ChartCard } from "@/components/charts/chart-card";
@@ -161,7 +161,7 @@ export default async function OverviewPage({
         <StatCard
           label="Active time"
           value={formatDuration(stats.activeMs)}
-          hint={`${formatCompact(stats.cacheReadTokens)} cache reads`}
+          hint={formatActivityHint(stats.peakConcurrency, stats.parallelFactor)}
           icon={<Clock className="h-5 w-5" />}
           accent={4}
         />

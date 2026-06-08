@@ -3,6 +3,11 @@ import { z } from "zod";
 import { getAdmin } from "@/lib/insforge/admin";
 import { authenticateCliRequest } from "@/lib/cli-auth";
 import { generateSessionSummaries } from "@/lib/session-summary";
+import {
+  engagedMsFromIntervalsIso,
+  mergeActivityIntervalsIso,
+  type ActivityInterval,
+} from "@/lib/activity";
 
 export const runtime = "nodejs";
 
@@ -22,6 +27,16 @@ const sessionSchema = z.object({
   cacheCreationTokens: z.number().int().min(0).default(0),
   startedAt: z.string().datetime().nullish(),
   endedAt: z.string().datetime().nullish(),
+  engagedMs: z.number().int().min(0).default(0),
+  activityIntervals: z
+    .array(
+      z.object({
+        start: z.string().datetime(),
+        end: z.string().datetime(),
+      })
+    )
+    .max(200)
+    .default([]),
 });
 
 const payloadSchema = z.object({
@@ -95,7 +110,15 @@ export async function POST(req: Request) {
       cacheCreationTokens: prev.cacheCreationTokens + s.cacheCreationTokens,
       startedAt: minDate(prev.startedAt, s.startedAt),
       endedAt: maxDate(prev.endedAt, s.endedAt),
+      activityIntervals: mergeActivityIntervalsIso(
+        (prev.activityIntervals ?? []) as ActivityInterval[],
+        (s.activityIntervals ?? []) as ActivityInterval[]
+      ),
+      engagedMs: 0,
     });
+  }
+  for (const s of merged.values()) {
+    s.engagedMs = engagedMsFromIntervalsIso((s.activityIntervals ?? []) as ActivityInterval[]);
   }
   const unique = [...merged.values()];
   const externalIds = unique.map((s) => s.externalId);
@@ -135,6 +158,8 @@ export async function POST(req: Request) {
     cache_creation_tokens: s.cacheCreationTokens,
     started_at: s.startedAt ?? null,
     ended_at: s.endedAt ?? null,
+    engaged_ms: s.engagedMs ?? 0,
+    activity_intervals: s.activityIntervals ?? [],
   }));
 
   // Upsert on (user_id, external_id). Re-syncs refresh mutable fields and

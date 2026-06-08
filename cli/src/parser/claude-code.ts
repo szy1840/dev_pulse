@@ -3,6 +3,7 @@ import { join, basename } from "node:path";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import type { ParsedSession, SessionMetadata } from "../types.js";
+import { buildActivityFromEvents } from "../activity.js";
 import { buildSessionSummary } from "../summary.js";
 import { buildSummaryNotes, cleanUserText } from "../session-notes.js";
 
@@ -148,8 +149,7 @@ export function parseSessionFile(filePath: string): ParsedSession | null {
   const projectName = cwd ? basename(cwd) : decodeProjectDir(filePath);
   const projectPathHash = cwd ? createHash("sha256").update(cwd).digest("hex").slice(0, 32) : null;
 
-  const startedAt = timestamps.length ? new Date(Math.min(...timestamps)).toISOString() : null;
-  const endedAt = timestamps.length ? new Date(Math.max(...timestamps)).toISOString() : null;
+  const activity = buildActivityFromEvents(timestamps);
 
   const summaryNotes = buildSummaryNotes({
     tool: TOOL_NAME,
@@ -171,8 +171,10 @@ export function parseSessionFile(filePath: string): ParsedSession | null {
     outputTokens,
     cacheReadTokens,
     cacheCreationTokens,
-    startedAt,
-    endedAt,
+    startedAt: activity.startedAt,
+    endedAt: activity.endedAt,
+    engagedMs: activity.engagedMs,
+    activityIntervals: activity.activityIntervals,
   };
 
   return { metadata, filePath, fingerprint: fingerprintFile(filePath) };

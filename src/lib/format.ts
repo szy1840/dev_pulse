@@ -21,6 +21,18 @@ export function formatDuration(ms: number): string {
   return `${s}s`;
 }
 
+/** Secondary line for active-time stats (parallel sessions). */
+export function formatActivityHint(peakConcurrency: number, parallelFactor: number): string {
+  const parts: string[] = [];
+  if (peakConcurrency > 1) {
+    parts.push(`peak ${peakConcurrency} concurrent`);
+  }
+  if (parallelFactor > 1.05) {
+    parts.push(`${parallelFactor.toFixed(1)}× parallel`);
+  }
+  return parts.length ? parts.join(" · ") : "mostly single-session";
+}
+
 const TOOL_LABELS: Record<string, string> = {
   "claude-code": "Claude Code",
   codex: "Codex",

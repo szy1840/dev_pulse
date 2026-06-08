@@ -32,6 +32,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@insforge/cli": "^0.1.87",
     "@types/node": "^22.13.5",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",

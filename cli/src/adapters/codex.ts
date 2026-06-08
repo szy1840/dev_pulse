@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { buildSessionSummary } from "../summary.js";
 import { buildSummaryNotes, cleanUserText } from "../session-notes.js";
+import { buildActivityFromEvents } from "../activity.js";
 import type { SessionMetadata } from "../types.js";
 import type { DiscoveredSession, ToolAdapter } from "./types.js";
 
@@ -213,6 +214,7 @@ function parseCodexSession(filePath: string, index: Map<string, SessionIndexRow>
   const cacheReadTokens =
     lastTokenUsage?.cached_input_tokens ?? lastTokenUsage?.cache_read_input_tokens ?? 0;
   const cacheCreationTokens = lastTokenUsage?.cache_creation_input_tokens ?? 0;
+  const activity = buildActivityFromEvents(timestamps);
 
   return {
     externalId: `${TOOL}:${rawId}`,
@@ -232,8 +234,10 @@ function parseCodexSession(filePath: string, index: Map<string, SessionIndexRow>
     outputTokens,
     cacheReadTokens,
     cacheCreationTokens,
-    startedAt: timestamps.length ? new Date(Math.min(...timestamps)).toISOString() : null,
-    endedAt: timestamps.length ? new Date(Math.max(...timestamps)).toISOString() : null,
+    startedAt: activity.startedAt,
+    endedAt: activity.endedAt,
+    engagedMs: activity.engagedMs,
+    activityIntervals: activity.activityIntervals,
   };
 }
 
