@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import "./suppress-warnings.js";
 import { Command } from "commander";
 import { login } from "./commands/login.js";
 import { sync } from "./commands/sync.js";

@@ -1,8 +1,11 @@
+/** Bump when burst/engaged logic changes so sessions re-sync once. */
+export const ACTIVITY_ALGO_VERSION = "v2";
+
 /** Gap between events before starting a new active burst. */
 export const IDLE_GAP_MS = 10 * 60 * 1000;
 
-/** Cap a single burst so one long agent run cannot dominate engaged time. */
-export const MAX_BURST_MS = 30 * 60 * 1000;
+/** Minimum credit for a burst that collapses to a single timestamp. */
+export const MIN_BURST_MS = 30 * 1000;
 
 export interface ActivityInterval {
   start: string;
@@ -11,10 +14,10 @@ export interface ActivityInterval {
 
 export function burstsFromEvents(
   events: number[],
-  options?: { idleGapMs?: number; maxBurstMs?: number }
+  options?: { idleGapMs?: number; minBurstMs?: number }
 ): [number, number][] {
   const idleGap = options?.idleGapMs ?? IDLE_GAP_MS;
-  const maxBurst = options?.maxBurstMs ?? MAX_BURST_MS;
+  const minBurst = options?.minBurstMs ?? MIN_BURST_MS;
   const sorted = [...new Set(events)].filter((t) => t > 0).sort((a, b) => a - b);
   if (!sorted.length) return [];
 
@@ -31,9 +34,11 @@ export function burstsFromEvents(
   }
   raw.push([start, prev]);
 
+  // No max cap: dense logs within a burst mean continuous agent work.
+  // Idle gaps (> IDLE_GAP_MS) already split review / away time into separate bursts.
   return raw.map(([s, e]) => {
-    const cappedEnd = Math.min(e, s + maxBurst);
-    return [s, Math.max(s, cappedEnd)] as [number, number];
+    const end = Math.max(e, s + minBurst);
+    return [s, end] as [number, number];
   });
 }
 
@@ -61,9 +66,10 @@ export function buildActivityFromEvents(events: number[]): {
   }
   const bursts = burstsFromEvents(sorted);
   const activityIntervals = intervalsToIso(bursts);
+  const lastBurstEnd = bursts.length ? bursts[bursts.length - 1][1] : sorted[sorted.length - 1];
   return {
     startedAt: new Date(sorted[0]).toISOString(),
-    endedAt: new Date(sorted[sorted.length - 1]).toISOString(),
+    endedAt: new Date(Math.max(sorted[sorted.length - 1], lastBurstEnd)).toISOString(),
     engagedMs: engagedMsFromBursts(bursts),
     activityIntervals,
   };

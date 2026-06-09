@@ -14,7 +14,7 @@ import {
 } from "./cursor-sources.js";
 import { aggregateBubbleStats, resolveSessionModel } from "../cursor-api/bubble-stats.js";
 import { buildApiUsageSessions } from "../cursor-api/usage-sessions.js";
-import { buildActivityFromEvents } from "../activity.js";
+import { buildActivityFromEvents, ACTIVITY_ALGO_VERSION } from "../activity.js";
 
 const TOOL = "cursor";
 const require = createRequire(import.meta.url);
@@ -142,7 +142,7 @@ function buildComposerSessions(): { metadata: SessionMetadata; fingerprint: stri
       const activity = buildActivityFromEvents(a.eventTimes);
 
       out.push({
-        fingerprint: `${a.hashes}:${inputTokens}:${outputTokens}:${activity.engagedMs}:${CURSOR_SUMMARY_VERSION}`,
+        fingerprint: `${a.hashes}:${inputTokens}:${outputTokens}:${activity.engagedMs}:${CURSOR_SUMMARY_VERSION}:${ACTIVITY_ALGO_VERSION}`,
         metadata: {
           externalId: `${TOOL}:${convId}`,
           tool: TOOL,

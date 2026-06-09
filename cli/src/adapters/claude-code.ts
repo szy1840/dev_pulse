@@ -5,6 +5,7 @@ import {
   fingerprintFile,
   parseSessionFile,
 } from "../parser/claude-code.js";
+import { ACTIVITY_ALGO_VERSION } from "../activity.js";
 import type { DiscoverOptions, DiscoveredSession, ToolAdapter } from "./types.js";
 
 const TOOL = "claude-code";
@@ -22,7 +23,7 @@ export const claudeCodeAdapter: ToolAdapter = {
     return listSessionFiles(dir).map((file) => ({
       // Change detection is per-file so each transcript is tracked independently.
       stateKey: `${TOOL}:${file}`,
-      fingerprint: safeFingerprint(file),
+      fingerprint: `${safeFingerprint(file)}:${ACTIVITY_ALGO_VERSION}`,
       load: () => {
         const parsed = parseSessionFile(file);
         if (!parsed) return null;

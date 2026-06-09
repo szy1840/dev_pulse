@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { buildSessionSummary } from "../summary.js";
 import { buildSummaryNotes, cleanUserText } from "../session-notes.js";
-import { buildActivityFromEvents } from "../activity.js";
+import { ACTIVITY_ALGO_VERSION, buildActivityFromEvents } from "../activity.js";
 import type { SessionMetadata } from "../types.js";
 import type { DiscoveredSession, ToolAdapter } from "./types.js";
 
@@ -253,7 +253,7 @@ export const codexAdapter: ToolAdapter = {
     const index = loadSessionIndex();
     return listCodexSessionFiles().map((file) => ({
       stateKey: `${TOOL}:${file}`,
-      fingerprint: safeFingerprint(file),
+      fingerprint: `${safeFingerprint(file)}:${ACTIVITY_ALGO_VERSION}`,
       load: () => parseCodexSession(file, index),
     }));
   },
