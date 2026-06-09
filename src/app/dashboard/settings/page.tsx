@@ -1,8 +1,10 @@
 import { requireUserId, getActiveTeam, getViewerTimezone } from "@/lib/auth";
-import { getMyTokens } from "@/lib/queries";
+import { getMyTokens, getTeamMembers } from "@/lib/queries";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { InviteCodeCard } from "@/components/invite-code-card";
-import { TokenManager } from "@/components/token-manager";
+import { ConnectedDevices } from "@/components/connected-devices";
+import { TeamMembersSettings } from "@/components/team-members-settings";
+import { CliSetupGuide } from "@/components/cli-setup-guide";
 import { TimezoneSettings } from "@/components/timezone-settings";
 import { formatTimezoneLabel } from "@/lib/timezone";
 
@@ -11,17 +13,52 @@ export default async function SettingsPage() {
   const team = await getActiveTeam(userId);
   if (!team) return null;
 
-  const [tokens, timeZone] = await Promise.all([
+  const [devices, timeZone, members] = await Promise.all([
     getMyTokens(team.id, userId),
     getViewerTimezone(userId),
+    getTeamMembers(team.id),
   ]);
+
+  const activeDeviceCount = devices.filter((d) => !d.revokedAt).length;
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold">Settings</h1>
-        <p className="text-sm text-muted-foreground">Manage your team invite and CLI tokens</p>
+        <p className="text-sm text-muted-foreground">
+          CLI, devices, team members, timezone, and invites for{" "}
+          <span className="font-medium text-foreground">{team.name}</span>.
+        </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Connect the CLI</CardTitle>
+          <CardDescription>
+            Run these commands on each developer machine.{" "}
+            <code className="rounded bg-muted px-1">devpulse login</code> opens your browser to
+            authorize — no manual tokens needed.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CliSetupGuide compact />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Connected devices</CardTitle>
+          <CardDescription>
+            {activeDeviceCount === 0
+              ? "Devices appear here after you run devpulse login on a machine."
+              : `${activeDeviceCount} active device${activeDeviceCount === 1 ? "" : "s"} can sync sessions for this team.`}{" "}
+            Revoke access if a laptop is lost or replaced.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ConnectedDevices devices={devices} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -36,47 +73,25 @@ export default async function SettingsPage() {
         </CardContent>
       </Card>
 
-      <InviteCodeCard teamName={team.name} inviteCode={team.inviteCode} />
-
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">CLI tokens</CardTitle>
+          <CardTitle className="text-base">Team members</CardTitle>
           <CardDescription>
-            Browser login creates tokens automatically. You can also generate one manually for CI
-            or headless machines, then run{" "}
-            <code className="rounded bg-muted px-1">devpulse login --no-browser</code>. Tokens are
-            scoped to this team and to you.
+            {members.length} member{members.length === 1 ? "" : "s"} in this team. Removing someone
+            only revokes their access — synced sessions stay in team history.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <TokenManager teamId={team.id} tokens={tokens} />
+          <TeamMembersSettings
+            teamId={team.id}
+            members={members}
+            viewerId={userId}
+            viewerRole={team.role}
+          />
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Connect the CLI</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <p className="text-muted-foreground">Run these on each developer&apos;s machine:</p>
-          <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs leading-relaxed">
-{`# install once per machine (Node.js 22+)
-npm install -g devpulse-ai
-
-# authenticate (opens your browser)
-devpulse login
-
-# or paste a token manually
-devpulse login --no-browser
-
-# scan local AI tool logs and upload new sessions
-devpulse sync
-
-# check what's configured and what would sync
-devpulse status`}
-          </pre>
-        </CardContent>
-      </Card>
+      <InviteCodeCard teamName={team.name} inviteCode={team.inviteCode} />
     </div>
   );
 }

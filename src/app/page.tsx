@@ -132,8 +132,8 @@ export default async function Home() {
               <Step
                 n={3}
                 icon={<KeyRound className="h-5 w-5" />}
-                title="Manage tokens (optional)"
-                body="Revoke devices or create manual tokens anytime under Settings."
+                title="Manage devices (optional)"
+                body="See connected machines and revoke access anytime under Settings."
                 cta={user ? { label: "Open Settings", href: "/dashboard/settings" } : undefined}
               />
               <Step
@@ -203,7 +203,7 @@ export default async function Home() {
               {user ? (
                 <>
                   <Button asChild variant="outline">
-                    <Link href="/dashboard/settings">CLI settings</Link>
+                    <Link href="/dashboard/settings">Settings</Link>
                   </Button>
                   <Button asChild variant="outline">
                     <Link href="/dashboard">View dashboard</Link>

@@ -1,5 +1,13 @@
 import { getAdmin } from "@/lib/insforge/admin";
-import { DEFAULT_TIMEZONE, startOfDayInTimezone } from "@/lib/timezone";
+import {
+  DEFAULT_TIMEZONE,
+  dayKeyInTimezone,
+  hourKeyInTimezone,
+  nextDayKey,
+  currentHourInTimezone,
+  startOfDayInTimezone,
+  weekdayHourInTimezone,
+} from "@/lib/timezone";
 import { computeTeamActivityStats, computeUserActivityStats } from "@/lib/activity";
 
 export type Period = "today" | "7d" | "30d" | "all";
@@ -53,21 +61,6 @@ async function fetchTeamSessions(teamId: string, since: Date | null): Promise<Se
 
 function toDate(v: string | null): Date | null {
   return v ? new Date(v) : null;
-}
-
-function dayKeyLocal(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-function hourKeyLocal(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  const h = String(d.getHours()).padStart(2, "0");
-  return `${y}-${m}-${day}T${h}:00`;
 }
 
 export type ActivityGranularity = "day" | "hour";
@@ -130,38 +123,41 @@ type DayAgg = { sessions: number; inputTokens: number; outputTokens: number };
 function fillDailySeries(
   since: Date | null,
   earliest: Date | null,
-  map: Map<string, DayAgg>
+  map: Map<string, DayAgg>,
+  timeZone: string
 ): DailyActivityPoint[] {
-  const start = since ?? earliest;
-  if (!start) return [];
+  const startInstant = since ?? earliest;
+  if (!startInstant) return [];
 
-  const cursor = new Date(start);
-  cursor.setHours(0, 0, 0, 0);
-  const end = new Date();
-  end.setHours(0, 0, 0, 0);
+  const endDay = dayKeyInTimezone(new Date(), timeZone);
+  let currentDay = dayKeyInTimezone(startInstant, timeZone);
 
   const out: DailyActivityPoint[] = [];
   let guard = 0;
-  while (cursor <= end && guard < 400) {
-    const k = dayKeyLocal(cursor);
-    const v = map.get(k) ?? { sessions: 0, inputTokens: 0, outputTokens: 0 };
-    out.push({ date: k, ...v, tokens: v.inputTokens + v.outputTokens });
-    cursor.setDate(cursor.getDate() + 1);
+  while (currentDay <= endDay && guard < 400) {
+    const v = map.get(currentDay) ?? { sessions: 0, inputTokens: 0, outputTokens: 0 };
+    out.push({ date: currentDay, ...v, tokens: v.inputTokens + v.outputTokens });
+    if (currentDay === endDay) break;
+    currentDay = nextDayKey(currentDay, timeZone);
     guard++;
   }
   return out;
 }
 
-function fillHourlySeries(dayStart: Date, map: Map<string, DayAgg>): DailyActivityPoint[] {
+function fillHourlySeries(
+  dayStart: Date,
+  map: Map<string, DayAgg>,
+  timeZone: string
+): DailyActivityPoint[] {
+  const todayDay = dayKeyInTimezone(new Date(), timeZone);
+  const endHour = currentHourInTimezone(timeZone);
   const out: DailyActivityPoint[] = [];
-  const endHour = new Date().getHours();
   for (let h = 0; h <= endHour; h++) {
-    const cursor = new Date(dayStart);
-    cursor.setHours(h, 0, 0, 0);
-    const k = hourKeyLocal(cursor);
+    const k = `${todayDay}T${String(h).padStart(2, "0")}:00`;
     const v = map.get(k) ?? { sessions: 0, inputTokens: 0, outputTokens: 0 };
     out.push({ date: k, ...v, tokens: v.inputTokens + v.outputTokens });
   }
+  void dayStart;
   return out;
 }
 
@@ -169,10 +165,14 @@ function fillHourlySeries(dayStart: Date, map: Map<string, DayAgg>): DailyActivi
 export async function getDailyActivityWithMembers(
   teamId: string,
   since: Date | null,
-  options?: { granularity?: ActivityGranularity }
+  options?: { granularity?: ActivityGranularity; timeZone?: string }
 ) {
   const granularity = options?.granularity ?? "day";
-  const bucketKey = granularity === "hour" ? hourKeyLocal : dayKeyLocal;
+  const timeZone = options?.timeZone ?? DEFAULT_TIMEZONE;
+  const bucketKey =
+    granularity === "hour"
+      ? (d: Date) => hourKeyInTimezone(d, timeZone)
+      : (d: Date) => dayKeyInTimezone(d, timeZone);
   const rows = await fetchTeamSessions(teamId, since);
   const teamMap = new Map<string, DayAgg>();
   const byUser = new Map<string, Map<string, DayAgg>>();
@@ -207,14 +207,14 @@ export async function getDailyActivityWithMembers(
 
   const team =
     granularity === "hour" && since
-      ? fillHourlySeries(since, teamMap)
-      : fillDailySeries(since, earliest, teamMap);
+      ? fillHourlySeries(since, teamMap, timeZone)
+      : fillDailySeries(since, earliest, teamMap, timeZone);
   if (team.length === 0) return { team, members: [] as MemberDailyActivity[] };
 
   const fillSeries = (map: Map<string, DayAgg>) =>
     granularity === "hour" && since
-      ? fillHourlySeries(since, map)
-      : fillDailySeries(since, earliest, map);
+      ? fillHourlySeries(since, map, timeZone)
+      : fillDailySeries(since, earliest, map, timeZone);
 
   const userIds = [...byUser.keys()];
   const profilesById = new Map<string, string>();
@@ -277,13 +277,17 @@ export type MemberHeatmap = HeatmapData & {
   name: string;
 };
 
-function buildHeatmapGrid(rows: Pick<SessionRow, "started_at">[]): HeatmapData {
+function buildHeatmapGrid(
+  rows: Pick<SessionRow, "started_at">[],
+  timeZone: string
+): HeatmapData {
   const grid: number[][] = Array.from({ length: 7 }, () => new Array(24).fill(0));
   let max = 0;
   for (const r of rows) {
     const d = toDate(r.started_at);
     if (!d) continue;
-    const cell = ++grid[d.getDay()][d.getHours()];
+    const { weekday, hour } = weekdayHourInTimezone(d, timeZone);
+    const cell = ++grid[weekday][hour];
     if (cell > max) max = cell;
   }
   return { grid, max };
@@ -291,10 +295,11 @@ function buildHeatmapGrid(rows: Pick<SessionRow, "started_at">[]): HeatmapData {
 
 export async function getHourlyHeatmapWithMembers(
   teamId: string,
-  since: Date | null
+  since: Date | null,
+  timeZone = DEFAULT_TIMEZONE
 ): Promise<{ team: HeatmapData; members: MemberHeatmap[] }> {
   const rows = await fetchTeamSessions(teamId, since);
-  const team = buildHeatmapGrid(rows);
+  const team = buildHeatmapGrid(rows, timeZone);
 
   const byUser = new Map<string, SessionRow[]>();
   for (const r of rows) {
@@ -320,7 +325,7 @@ export async function getHourlyHeatmapWithMembers(
 
   const members: MemberHeatmap[] = userIds
     .map((id) => {
-      const { grid, max } = buildHeatmapGrid(byUser.get(id) ?? []);
+      const { grid, max } = buildHeatmapGrid(byUser.get(id) ?? [], timeZone);
       return {
         memberId: id,
         name: profilesById.get(id) ?? "Member",
@@ -335,8 +340,8 @@ export async function getHourlyHeatmapWithMembers(
 }
 
 /** @deprecated Prefer getHourlyHeatmapWithMembers */
-export async function getHourlyHeatmap(teamId: string, since: Date | null) {
-  const { team } = await getHourlyHeatmapWithMembers(teamId, since);
+export async function getHourlyHeatmap(teamId: string, since: Date | null, timeZone = DEFAULT_TIMEZONE) {
+  const { team } = await getHourlyHeatmapWithMembers(teamId, since, timeZone);
   return team;
 }
 
@@ -526,6 +531,48 @@ export async function getUserSessionCount(teamId: string, userId: string): Promi
     .eq("user_id", userId);
   if (error) return 0;
   return count ?? 0;
+}
+
+/** Team roster with profile fields, oldest members first. */
+export async function getTeamMembers(teamId: string) {
+  const admin = getAdmin();
+  const { data: memberData, error } = await admin.database
+    .from("team_members")
+    .select("user_id, role, joined_at")
+    .eq("team_id", teamId)
+    .order("joined_at", { ascending: true });
+
+  if (error || !memberData) return [];
+
+  type MemberRow = { user_id: string; role: string; joined_at: string };
+  const members = memberData as MemberRow[];
+  const memberIds = members.map((m) => m.user_id);
+
+  const profilesById = new Map<
+    string,
+    { name: string | null; email: string | null; avatar_url: string | null }
+  >();
+  if (memberIds.length > 0) {
+    const { data: profileData } = await admin.database
+      .from("profiles")
+      .select("id, name, email, avatar_url")
+      .in("id", memberIds);
+    for (const p of (profileData as { id: string; name: string | null; email: string | null; avatar_url: string | null }[] | null) ?? []) {
+      profilesById.set(p.id, { name: p.name, email: p.email, avatar_url: p.avatar_url });
+    }
+  }
+
+  return members.map((m) => {
+    const profile = profilesById.get(m.user_id);
+    return {
+      userId: m.user_id,
+      role: m.role,
+      joinedAt: new Date(m.joined_at),
+      name: profile?.name ?? null,
+      email: profile?.email ?? null,
+      imageUrl: profile?.avatar_url ?? null,
+    };
+  });
 }
 
 /** CLI tokens owned by this user within a team, newest first. */

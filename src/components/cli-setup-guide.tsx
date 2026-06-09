@@ -78,13 +78,54 @@ function CopyBlock({ text, multiline = false }: { text: string; multiline?: bool
   );
 }
 
+function StepList({ className }: { className?: string }) {
+  return (
+    <ol className={cn("space-y-4", className)}>
+      {STEPS.map(({ n, icon: Icon, title, body, command }) => (
+        <li key={n} className="rounded-xl border bg-background p-4 shadow-sm">
+          <div className="flex gap-3">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+              {n}
+            </span>
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="flex items-center gap-2">
+                <Icon className="h-4 w-4 text-muted-foreground" />
+                <h4 className="font-medium">{title}</h4>
+              </div>
+              <p className="text-sm text-muted-foreground">{body}</p>
+              <CopyBlock text={command} />
+            </div>
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 export function CliSetupGuide({
   className,
   showDashboardCta = false,
+  compact = false,
 }: {
   className?: string;
   showDashboardCta?: boolean;
+  compact?: boolean;
 }) {
+  if (compact) {
+    return (
+      <div className={cn("space-y-4", className)}>
+        <StepList />
+        <div className="rounded-lg border bg-muted/40 p-3">
+          <p className="text-xs text-muted-foreground">
+            Check configuration anytime with{" "}
+            <code className="rounded bg-muted px-1 font-mono">devpulse status</code>. Only usage
+            metadata is uploaded — never code or transcripts.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={cn("space-y-6", className)}>
       <div className="flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
@@ -107,25 +148,7 @@ export function CliSetupGuide({
 
         <section className="space-y-4">
           <h3 className="font-medium">Manual setup</h3>
-          <ol className="space-y-4">
-            {STEPS.map(({ n, icon: Icon, title, body, command }) => (
-              <li key={n} className="rounded-xl border bg-background p-4 shadow-sm">
-                <div className="flex gap-3">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                    {n}
-                  </span>
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Icon className="h-4 w-4 text-muted-foreground" />
-                      <h4 className="font-medium">{title}</h4>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{body}</p>
-                    <CopyBlock text={command} />
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ol>
+          <StepList />
         </section>
       </div>
 

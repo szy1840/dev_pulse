@@ -84,7 +84,7 @@ export function CliAuthorizeForm({ state, port, hostname, teamName }: Props) {
           onKeyDown={(e) => e.key === "Enter" && authorize()}
         />
         <p className="text-xs text-muted-foreground">
-          Shown in Settings → CLI tokens so you can revoke access later.
+          Shown in Settings → Connected devices so you can revoke access later.
         </p>
       </div>
 

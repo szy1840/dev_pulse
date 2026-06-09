@@ -4,11 +4,16 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { clearAuthCookies } from "@insforge/sdk/ssr";
 import { getAdmin } from "@/lib/insforge/admin";
-import { requireUserId, syncProfile, requireMembership, ACTIVE_TEAM_COOKIE, TIMEZONE_COOKIE } from "@/lib/auth";
+import {
+  requireUserId,
+  syncProfile,
+  requireMembership,
+  getMyTeams,
+  ACTIVE_TEAM_COOKIE,
+  TIMEZONE_COOKIE,
+} from "@/lib/auth";
 import { isValidTimezone } from "@/lib/timezone";
 import { newInviteCode } from "@/lib/ids";
-import { createCliTokenForUser } from "@/lib/create-cli-token";
-
 type ActionResult<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
 const ACTIVE_TEAM_COOKIE_OPTS = { path: "/", maxAge: 60 * 60 * 24 * 365 };
@@ -84,19 +89,109 @@ export async function setActiveTeam(teamId: string): Promise<ActionResult> {
   return { ok: true };
 }
 
-/** Returns the plaintext token exactly once — it is never recoverable later. */
-export async function generateToken(
+async function revokeTeamCliTokens(teamId: string, userId: string) {
+  const admin = getAdmin();
+  await admin.database
+    .from("cli_tokens")
+    .update({ revoked_at: new Date().toISOString() })
+    .eq("team_id", teamId)
+    .eq("user_id", userId)
+    .is("revoked_at", null);
+}
+
+async function countTeamOwners(teamId: string): Promise<number> {
+  const admin = getAdmin();
+  const { count, error } = await admin.database
+    .from("team_members")
+    .select("user_id", { count: "exact", head: true })
+    .eq("team_id", teamId)
+    .eq("role", "owner");
+  if (error) return 0;
+  return count ?? 0;
+}
+
+/** Remove a member from the team. Sessions and profile data are kept. */
+export async function removeTeamMember(
   teamId: string,
-  name: string
-): Promise<ActionResult<{ token: string; prefix: string }>> {
-  const userId = await requireUserId();
-  await requireMembership(userId, teamId);
+  targetUserId: string
+): Promise<ActionResult> {
+  const actorId = await requireUserId();
+  const actorRole = await requireMembership(actorId, teamId);
 
-  const result = await createCliTokenForUser(userId, teamId, name.trim() || "CLI token");
-  if (!result.ok) return { ok: false, error: result.error };
+  if (actorRole !== "owner" && actorRole !== "admin") {
+    return { ok: false, error: "Only team owners can remove members." };
+  }
+  if (targetUserId === actorId) {
+    return { ok: false, error: "Use “Leave team” to remove yourself." };
+  }
 
+  const admin = getAdmin();
+  const { data: target } = await admin.database
+    .from("team_members")
+    .select("role")
+    .eq("team_id", teamId)
+    .eq("user_id", targetUserId)
+    .maybeSingle();
+
+  if (!target) return { ok: false, error: "Member not found." };
+
+  const targetRole = (target as { role: string }).role;
+  if (targetRole === "owner") {
+    const owners = await countTeamOwners(teamId);
+    if (owners <= 1) return { ok: false, error: "Cannot remove the only team owner." };
+  }
+
+  const { error } = await admin.database
+    .from("team_members")
+    .delete()
+    .eq("team_id", teamId)
+    .eq("user_id", targetUserId);
+  if (error) return { ok: false, error: "Could not remove member." };
+
+  await revokeTeamCliTokens(teamId, targetUserId);
   revalidatePath("/dashboard/settings");
-  return { ok: true, data: { token: result.token, prefix: result.prefix } };
+  revalidatePath("/dashboard/members");
+  return { ok: true };
+}
+
+/** Leave the current team. Historical sessions stay with the team. */
+export async function leaveTeam(teamId: string): Promise<ActionResult> {
+  const userId = await requireUserId();
+  const role = await requireMembership(userId, teamId);
+
+  if (role === "owner") {
+    const owners = await countTeamOwners(teamId);
+    if (owners <= 1) {
+      return {
+        ok: false,
+        error: "You are the only owner. Transfer ownership or remove other members first.",
+      };
+    }
+  }
+
+  const admin = getAdmin();
+  const { error } = await admin.database
+    .from("team_members")
+    .delete()
+    .eq("team_id", teamId)
+    .eq("user_id", userId);
+  if (error) return { ok: false, error: "Could not leave the team." };
+
+  await revokeTeamCliTokens(teamId, userId);
+
+  const cookieStore = await cookies();
+  if (cookieStore.get(ACTIVE_TEAM_COOKIE)?.value === teamId) {
+    const remaining = (await getMyTeams(userId)).filter((t) => t.id !== teamId);
+    if (remaining.length > 0) {
+      cookieStore.set(ACTIVE_TEAM_COOKIE, remaining[0].id, ACTIVE_TEAM_COOKIE_OPTS);
+    } else {
+      cookieStore.delete(ACTIVE_TEAM_COOKIE);
+    }
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/settings");
+  return { ok: true };
 }
 
 export async function revokeToken(tokenId: string): Promise<ActionResult> {

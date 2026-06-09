@@ -1,6 +1,6 @@
 import { formatDistanceToNow } from "date-fns";
 import { Cpu, Wrench } from "lucide-react";
-import { requireUserId, getActiveTeam } from "@/lib/auth";
+import { requireUserId, getActiveTeam, getViewerTimezone } from "@/lib/auth";
 import {
   getRecentSessions,
   getModelBreakdown,
@@ -33,7 +33,8 @@ export default async function SessionsPage({
   if (!team) return null;
 
   const period = resolvePeriod((await searchParams).period);
-  const since = periodStart(period);
+  const timeZone = await getViewerTimezone(userId);
+  const since = periodStart(period, timeZone);
   const [rows, models, tools] = await Promise.all([
     getRecentSessions(team.id, since, 100),
     getModelBreakdown(team.id, since),

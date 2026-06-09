@@ -49,11 +49,11 @@ export default async function OverviewPage({
   const [stats, dailyActivity, models, tools, projects, heatmap, todaySessions, todayStats, membersToday] =
     await Promise.all([
       getTeamStats(team.id, since),
-      getDailyActivityWithMembers(team.id, since, { granularity: activityGranularity }),
+      getDailyActivityWithMembers(team.id, since, { granularity: activityGranularity, timeZone }),
       getModelBreakdown(team.id, since),
       getToolBreakdown(team.id, since),
       getProjectBreakdown(team.id, since),
-      getHourlyHeatmapWithMembers(team.id, since),
+      getHourlyHeatmapWithMembers(team.id, since, timeZone),
       getSessionsForSummary(team.id, todaySince),
       getTeamStats(team.id, todaySince),
       getMemberActivity(team.id, todaySince),

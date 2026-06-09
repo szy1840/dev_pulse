@@ -41,14 +41,12 @@ export async function login(opts: LoginOptions) {
       token = (await loginWithBrowser(config.apiUrl)) ?? undefined;
     } catch (err) {
       ui.warn(`Browser login failed: ${(err as Error).message}`);
-      ui.dim("You can paste a token from Settings instead.");
+      ui.dim("You can paste an existing token with --token, or retry browser login.");
     }
   }
 
   if (!token) {
-    token = await prompt(
-      `Paste a CLI token (create one at ${config.apiUrl}/dashboard/settings):\n> `
-    );
+    token = await prompt("Paste a CLI token:\n> ");
   }
 
   if (!token) {

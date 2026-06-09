@@ -7,7 +7,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { parseSessionFile, listSessionFiles } from "../dist/parser/claude-code.js";
-import { buildActivityFromEvents, burstsFromEvents, IDLE_GAP_MS, MIN_BURST_MS, ACTIVITY_ALGO_VERSION } from "../dist/activity.js";
+import { buildActivityFromEvents, burstsFromEvents, IDLE_GAP_MS, MIN_BURST_MS, BURST_PADDING_MS, ACTIVITY_ALGO_VERSION } from "../dist/activity.js";
 
 function fmtMs(ms) {
   if (!ms) return "0m";
@@ -55,7 +55,7 @@ function gapStats(timestamps) {
 
 const files = listSessionFiles();
 console.log(`\n=== Claude Code activity validation (${files.length} local sessions) ===\n`);
-console.log(`Constants: IDLE_GAP=${IDLE_GAP_MS / 60000}min, MIN_BURST=${MIN_BURST_MS / 1000}s, ALGO=${ACTIVITY_ALGO_VERSION}\n`);
+console.log(`Constants: IDLE_GAP=${IDLE_GAP_MS / 60000}min, MIN_BURST=${MIN_BURST_MS / 1000}s, PADDING=${BURST_PADDING_MS / 60000}min, ALGO=${ACTIVITY_ALGO_VERSION}\n`);
 
 const rows = [];
 for (const file of files) {

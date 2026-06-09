@@ -1,11 +1,14 @@
 /** Bump when burst/engaged logic changes so sessions re-sync once. */
-export const ACTIVITY_ALGO_VERSION = "v2";
+export const ACTIVITY_ALGO_VERSION = "v3";
 
 /** Gap between events before starting a new active burst. */
 export const IDLE_GAP_MS = 10 * 60 * 1000;
 
 /** Minimum credit for a burst that collapses to a single timestamp. */
 export const MIN_BURST_MS = 30 * 1000;
+
+/** Pad each burst at start/end for likely review/context switching near session edges. */
+export const BURST_PADDING_MS = 5 * 60 * 1000;
 
 export interface ActivityInterval {
   start: string;
@@ -14,10 +17,11 @@ export interface ActivityInterval {
 
 export function burstsFromEvents(
   events: number[],
-  options?: { idleGapMs?: number; minBurstMs?: number }
+  options?: { idleGapMs?: number; minBurstMs?: number; paddingMs?: number }
 ): [number, number][] {
   const idleGap = options?.idleGapMs ?? IDLE_GAP_MS;
   const minBurst = options?.minBurstMs ?? MIN_BURST_MS;
+  const padding = options?.paddingMs ?? BURST_PADDING_MS;
   const sorted = [...new Set(events)].filter((t) => t > 0).sort((a, b) => a - b);
   if (!sorted.length) return [];
 
@@ -35,10 +39,10 @@ export function burstsFromEvents(
   raw.push([start, prev]);
 
   // No max cap: dense logs within a burst mean continuous agent work.
-  // Idle gaps (> IDLE_GAP_MS) already split review / away time into separate bursts.
+  // Idle gaps (> IDLE_GAP_MS) split long breaks; padding credits brief review at burst edges.
   return raw.map(([s, e]) => {
-    const end = Math.max(e, s + minBurst);
-    return [s, end] as [number, number];
+    const coreEnd = Math.max(e, s + minBurst);
+    return [s - padding, coreEnd + padding] as [number, number];
   });
 }
 
