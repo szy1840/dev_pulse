@@ -7,6 +7,14 @@ allowed_redirect_urls = [
   "https://7aj5nkyd.insforge.site/dashboard",
   "https://7aj5nkyd.insforge.site/cli/authorize",
   "https://7aj5nkyd.insforge.site/sign-in",
+  "https://trydevpulse.com/api/auth/callback",
+  "https://trydevpulse.com/dashboard",
+  "https://trydevpulse.com/cli/authorize",
+  "https://trydevpulse.com/sign-in",
+  "https://www.trydevpulse.com/api/auth/callback",
+  "https://www.trydevpulse.com/dashboard",
+  "https://www.trydevpulse.com/cli/authorize",
+  "https://www.trydevpulse.com/sign-in",
 ]
 require_email_verification = true
 verify_email_method = "code"

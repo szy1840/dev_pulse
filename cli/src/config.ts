@@ -6,9 +6,10 @@ const CONFIG_DIR = join(homedir(), ".devpulse");
 const CONFIG_PATH = join(CONFIG_DIR, "config.json");
 const STATE_PATH = join(CONFIG_DIR, "state.json");
 
-/** Public dashboard URL (InsForge Deployments). */
-export const PRODUCTION_API_URL = "https://7aj5nkyd.insforge.site";
+/** Public dashboard URL. */
+export const PRODUCTION_API_URL = "https://www.trydevpulse.com";
 const LEGACY_LOCAL_API_URL = "http://localhost:3000";
+const LEGACY_API_URLS = [LEGACY_LOCAL_API_URL, "https://7aj5nkyd.insforge.site"];
 
 const DEFAULT_API_URL = process.env.DEVPULSE_API_URL?.replace(/\/$/, "") || PRODUCTION_API_URL;
 
@@ -16,8 +17,8 @@ function resolveApiUrl(stored?: string): string {
   if (process.env.DEVPULSE_API_URL) {
     return process.env.DEVPULSE_API_URL.replace(/\/$/, "");
   }
-  // Upgrade configs that only ever had the old localhost default.
-  if (!stored || stored.replace(/\/$/, "") === LEGACY_LOCAL_API_URL) {
+  // Upgrade configs still pointing at an old default (localhost or insforge.site).
+  if (!stored || LEGACY_API_URLS.includes(stored.replace(/\/$/, ""))) {
     return DEFAULT_API_URL;
   }
   return stored.replace(/\/$/, "");
