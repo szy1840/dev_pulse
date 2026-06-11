@@ -10,10 +10,45 @@ import {
 } from "recharts";
 import { ChartSize } from "./chart-size";
 import { formatNumber } from "@/lib/format";
+import { isUnknownLabel, UnknownHint } from "@/components/unknown-hint";
 import { colorAt, AXIS_PROPS } from "./chart-theme";
 import { TooltipCard } from "./chart-tooltip";
 
 export type BarItem = { name: string; value: number; sub?: number };
+
+type CategoryTickProps = {
+  x?: number;
+  y?: number;
+  payload?: { value?: string };
+};
+
+function CategoryTick({ x = 0, y = 0, payload }: CategoryTickProps) {
+  const value = String(payload?.value ?? "");
+  const label = value.length > 16 ? `${value.slice(0, 15)}…` : value;
+  const showHint = isUnknownLabel(value);
+
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text
+        x={0}
+        y={0}
+        dy={4}
+        textAnchor="end"
+        fill="hsl(var(--muted-foreground))"
+        fontSize={12}
+      >
+        {label}
+      </text>
+      {showHint && (
+        <foreignObject x={4} y={-10} width={24} height={24} className="overflow-visible">
+          <div className="flex h-5 w-5 items-center justify-center">
+            <UnknownHint />
+          </div>
+        </foreignObject>
+      )}
+    </g>
+  );
+}
 
 /** Horizontal bar ranking. `valueLabel`/`subLabel` name the metrics in tooltips. */
 export function BarListChart({
@@ -43,8 +78,8 @@ export function BarListChart({
           type="category"
           dataKey="name"
           {...AXIS_PROPS}
-          width={110}
-          tickFormatter={(v: string) => (v.length > 16 ? v.slice(0, 15) + "…" : v)}
+          width={128}
+          tick={<CategoryTick />}
         />
         <Tooltip
           cursor={{ fill: "hsl(var(--muted) / 0.5)" }}

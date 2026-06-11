@@ -50,13 +50,13 @@ export function normalizeToolSlug(tool: string | null | undefined): string {
 
 /** Human-readable coding agent name, e.g. "claude-code" -> "Claude Code". */
 export function prettyTool(tool: string | null | undefined): string {
-  if (!tool) return "Unknown";
+  if (!tool || normalizeToolSlug(tool) === "unknown") return "Unknown";
   return TOOL_LABELS[normalizeToolSlug(tool)] ?? tool.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 /** Shorten a model id for display, e.g. "claude-opus-4-8" -> "Opus 4.8". */
 export function prettyModel(model: string | null | undefined): string {
-  if (!model) return "Unknown";
+  if (!model || model.trim().toLowerCase() === "unknown") return "Unknown";
   const m = model.toLowerCase();
   const match = m.match(/(opus|sonnet|haiku)-?(\d+)[-.]?(\d+)?/);
   if (match) {

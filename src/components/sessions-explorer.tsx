@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ToolBadge } from "@/components/tool-badge";
+import { isUnknownLabel, UnknownValue } from "@/components/unknown-hint";
 import { formatCompact, formatDuration, prettyModel, prettyTool } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -448,7 +449,9 @@ export function SessionsExplorer({
                       </TableCell>
                     )}
                     <TableCell className="max-w-[140px]">
-                      <span className="text-sm font-medium">{s.projectName ?? "Unknown"}</span>
+                      <span className="text-sm font-medium">
+                        {s.projectName ?? <UnknownValue />}
+                      </span>
                     </TableCell>
                     <TableCell className="max-w-md">
                       <p className="text-sm leading-snug text-muted-foreground">
@@ -464,7 +467,7 @@ export function SessionsExplorer({
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="whitespace-nowrap">
-                        {prettyModel(s.model)}
+                        {isUnknownLabel(prettyModel(s.model)) ? <UnknownValue /> : prettyModel(s.model)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{formatCompact(tokens)}</TableCell>
@@ -496,7 +499,9 @@ export function SessionsExplorer({
                         <span className="text-muted-foreground">·</span>
                       </>
                     )}
-                    <span className="truncate text-sm font-medium">{s.projectName ?? "Unknown"}</span>
+                    <span className="truncate text-sm font-medium">
+                      {s.projectName ?? <UnknownValue />}
+                    </span>
                     <span
                       className="ml-auto whitespace-nowrap text-xs text-muted-foreground"
                       title={s.startedAt ? format(s.startedAt, "PPpp") : undefined}
