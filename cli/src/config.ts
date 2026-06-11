@@ -40,6 +40,8 @@ export interface SessionState {
 export interface State {
   sessions: Record<string, SessionState>; // keyed by externalId
   lastSyncAt?: string;
+  /** Per-repo incremental commit collection watermark, keyed by repoRootHash. */
+  gitRepos?: Record<string, { lastCollectedAt: string }>;
 }
 
 function ensureDir() {
@@ -65,7 +67,11 @@ export function loadState(): State {
   if (!existsSync(STATE_PATH)) return { sessions: {} };
   try {
     const parsed = JSON.parse(readFileSync(STATE_PATH, "utf8")) as State;
-    return { sessions: parsed.sessions ?? {}, lastSyncAt: parsed.lastSyncAt };
+    return {
+      sessions: parsed.sessions ?? {},
+      lastSyncAt: parsed.lastSyncAt,
+      gitRepos: parsed.gitRepos ?? {},
+    };
   } catch {
     return { sessions: {} };
   }

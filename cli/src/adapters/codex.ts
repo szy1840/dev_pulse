@@ -5,6 +5,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { buildSessionSummary } from "../summary.js";
 import { buildSummaryNotes, cleanUserText } from "../session-notes.js";
 import { ACTIVITY_ALGO_VERSION, buildActivityFromEvents } from "../activity.js";
+import { SPAN_ALGO_VERSION, buildSpans, type SpanEvent } from "../spans.js";
 import type { SessionMetadata } from "../types.js";
 import type { DiscoveredSession, ToolAdapter } from "./types.js";
 
@@ -81,6 +82,23 @@ function extractMessageText(payload: { content?: unknown; text?: string }): stri
   return null;
 }
 
+/** File paths from an apply_patch body: `*** Update File: <path>` etc. */
+function filePathsFromPatch(patch: string): string[] {
+  const out: string[] = [];
+  const re = /^\*\*\* (?:Update|Add|Delete) File: (.+)$/gm;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(patch)) !== null) out.push(m[1].trim());
+  return out;
+}
+
+interface CodexTokenUsage {
+  input_tokens?: number;
+  output_tokens?: number;
+  cached_input_tokens?: number;
+  cache_read_input_tokens?: number;
+  cache_creation_input_tokens?: number;
+}
+
 function isNoiseUserText(text: string): boolean {
   const t = text.trim();
   if (!t) return true;
@@ -103,13 +121,14 @@ function parseCodexSession(filePath: string, index: Map<string, SessionIndexRow>
   const seenUserMessages = new Set<string>();
   let messageCount = 0;
   const timestamps: number[] = [];
-  let lastTokenUsage: {
-    input_tokens?: number;
-    output_tokens?: number;
-    cached_input_tokens?: number;
-    cache_read_input_tokens?: number;
-    cache_creation_input_tokens?: number;
-  } | null = null;
+  let lastTokenUsage: CodexTokenUsage | null = null;
+  const spanEvents: SpanEvent[] = [];
+  // token_count carries cumulative totals; successive diffs give per-turn deltas.
+  // Compaction resets the counter mid-session, so "last total" undercounts —
+  // summing deltas across resets is the accurate session total.
+  const prevTotal = { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 };
+  const summed = { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 };
+  let sawUsageDelta = false;
 
   function pushUserMessage(raw: string | null | undefined) {
     const cleaned = raw ? cleanUserText(raw) : null;
@@ -132,9 +151,13 @@ function parseCodexSession(filePath: string, index: Map<string, SessionIndexRow>
       continue;
     }
 
+    let rowTs: number | null = null;
     if (row.timestamp) {
       const t = Date.parse(row.timestamp);
-      if (!Number.isNaN(t)) timestamps.push(t);
+      if (!Number.isNaN(t)) {
+        timestamps.push(t);
+        rowTs = t;
+      }
     }
 
     if (row.type === "session_meta" && row.payload) {
@@ -153,20 +176,8 @@ function parseCodexSession(filePath: string, index: Map<string, SessionIndexRow>
         type?: string;
         message?: string;
         info?: {
-          total_token_usage?: {
-            input_tokens?: number;
-            output_tokens?: number;
-            cached_input_tokens?: number;
-            cache_read_input_tokens?: number;
-            cache_creation_input_tokens?: number;
-          };
-          last_token_usage?: {
-            input_tokens?: number;
-            output_tokens?: number;
-            cached_input_tokens?: number;
-            cache_read_input_tokens?: number;
-            cache_creation_input_tokens?: number;
-          };
+          total_token_usage?: CodexTokenUsage;
+          last_token_usage?: CodexTokenUsage;
         };
       };
       if (p.type === "user_message" && typeof p.message === "string") {
@@ -174,16 +185,81 @@ function parseCodexSession(filePath: string, index: Map<string, SessionIndexRow>
       }
       if (p.type === "token_count") {
         lastTokenUsage = p.info?.total_token_usage ?? p.info?.last_token_usage ?? lastTokenUsage;
+
+        // Per-turn usage delta from cumulative totals (clamped: compaction can
+        // reset the counter). Falls back to last_token_usage when totals are absent.
+        const total = p.info?.total_token_usage;
+        const last = p.info?.last_token_usage;
+        if (rowTs !== null && (total || last)) {
+          const cur = total
+            ? {
+                input: total.input_tokens ?? 0,
+                output: total.output_tokens ?? 0,
+                cacheRead: total.cached_input_tokens ?? total.cache_read_input_tokens ?? 0,
+                cacheCreation: total.cache_creation_input_tokens ?? 0,
+              }
+            : null;
+          // A drop in cumulative input means the counter reset (compaction):
+          // the new cumulative is a fresh count, so take it whole.
+          const isReset = cur !== null && cur.input < prevTotal.input;
+          const delta = cur
+            ? {
+                inputTokens: isReset ? cur.input : Math.max(0, cur.input - prevTotal.input),
+                outputTokens: isReset ? cur.output : Math.max(0, cur.output - prevTotal.output),
+                cacheReadTokens: isReset
+                  ? cur.cacheRead
+                  : Math.max(0, cur.cacheRead - prevTotal.cacheRead),
+                cacheCreationTokens: isReset
+                  ? cur.cacheCreation
+                  : Math.max(0, cur.cacheCreation - prevTotal.cacheCreation),
+              }
+            : {
+                inputTokens: last!.input_tokens ?? 0,
+                outputTokens: last!.output_tokens ?? 0,
+                cacheReadTokens: last!.cached_input_tokens ?? last!.cache_read_input_tokens ?? 0,
+                cacheCreationTokens: last!.cache_creation_input_tokens ?? 0,
+              };
+          if (cur) Object.assign(prevTotal, cur);
+          summed.input += delta.inputTokens;
+          summed.output += delta.outputTokens;
+          summed.cacheRead += delta.cacheReadTokens;
+          summed.cacheCreation += delta.cacheCreationTokens;
+          sawUsageDelta = true;
+          spanEvents.push({ ts: rowTs, usage: delta });
+        }
       }
     }
 
     if (row.type === "response_item" && row.payload) {
-      const p = row.payload as { type?: string; role?: string; content?: unknown; text?: string };
+      const p = row.payload as {
+        type?: string;
+        role?: string;
+        content?: unknown;
+        text?: string;
+        name?: string;
+        input?: string;
+        arguments?: string;
+      };
       if (p.type === "message") {
         messageCount++;
         if (p.role === "user") {
           pushUserMessage(extractMessageText(p));
         }
+        if (rowTs !== null) spanEvents.push({ ts: rowTs, isMessage: true });
+      }
+      // apply_patch carries file paths (custom_tool_call: input; function_call: JSON arguments).
+      if (p.name === "apply_patch" && rowTs !== null) {
+        let patch = typeof p.input === "string" ? p.input : "";
+        if (!patch && typeof p.arguments === "string") {
+          try {
+            const args = JSON.parse(p.arguments) as { input?: string };
+            if (typeof args.input === "string") patch = args.input;
+          } catch {
+            /* not JSON — ignore */
+          }
+        }
+        const filePaths = filePathsFromPatch(patch);
+        if (filePaths.length > 0) spanEvents.push({ ts: rowTs, filePaths });
       }
     }
   }
@@ -209,11 +285,16 @@ function parseCodexSession(filePath: string, index: Map<string, SessionIndexRow>
     userMessages: nonAutomation.length ? nonAutomation : userMessages,
   });
 
-  const inputTokens = lastTokenUsage?.input_tokens ?? 0;
-  const outputTokens = lastTokenUsage?.output_tokens ?? 0;
-  const cacheReadTokens =
-    lastTokenUsage?.cached_input_tokens ?? lastTokenUsage?.cache_read_input_tokens ?? 0;
-  const cacheCreationTokens = lastTokenUsage?.cache_creation_input_tokens ?? 0;
+  // Delta sums survive mid-session counter resets; fall back to the last
+  // cumulative snapshot for old transcripts without usable token_count events.
+  const inputTokens = sawUsageDelta ? summed.input : lastTokenUsage?.input_tokens ?? 0;
+  const outputTokens = sawUsageDelta ? summed.output : lastTokenUsage?.output_tokens ?? 0;
+  const cacheReadTokens = sawUsageDelta
+    ? summed.cacheRead
+    : lastTokenUsage?.cached_input_tokens ?? lastTokenUsage?.cache_read_input_tokens ?? 0;
+  const cacheCreationTokens = sawUsageDelta
+    ? summed.cacheCreation
+    : lastTokenUsage?.cache_creation_input_tokens ?? 0;
   const activity = buildActivityFromEvents(timestamps);
 
   return {
@@ -238,6 +319,8 @@ function parseCodexSession(filePath: string, index: Map<string, SessionIndexRow>
     endedAt: activity.endedAt,
     engagedMs: activity.engagedMs,
     activityIntervals: activity.activityIntervals,
+    spans: buildSpans(spanEvents),
+    localCwd: cwd,
   };
 }
 
@@ -253,7 +336,7 @@ export const codexAdapter: ToolAdapter = {
     const index = loadSessionIndex();
     return listCodexSessionFiles().map((file) => ({
       stateKey: `${TOOL}:${file}`,
-      fingerprint: `${safeFingerprint(file)}:${ACTIVITY_ALGO_VERSION}`,
+      fingerprint: `${safeFingerprint(file)}:${ACTIVITY_ALGO_VERSION}:${SPAN_ALGO_VERSION}`,
       load: () => parseCodexSession(file, index),
     }));
   },

@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import type { ParsedSession, SessionMetadata } from "../types.js";
 import { buildActivityFromEvents } from "../activity.js";
+import { buildSpans, type SpanEvent } from "../spans.js";
 import { buildSessionSummary } from "../summary.js";
 import { buildSummaryNotes, cleanUserText } from "../session-notes.js";
 
@@ -44,6 +45,9 @@ interface Usage {
 interface MessageContentPart {
   type?: string;
   text?: string;
+  /** tool_use blocks: tool name + structured input (file_path for Edit/Write/Read). */
+  name?: string;
+  input?: { file_path?: string };
 }
 interface Message {
   role?: string;
@@ -56,6 +60,7 @@ interface Entry {
   timestamp?: string;
   sessionId?: string;
   cwd?: string;
+  gitBranch?: string;
   isMeta?: boolean;
   summary?: string;
   message?: Message;
@@ -95,6 +100,7 @@ export function parseSessionFile(filePath: string): ParsedSession | null {
   let cacheCreationTokens = 0;
   const models: string[] = [];
   const timestamps: number[] = [];
+  const spanEvents: SpanEvent[] = [];
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -108,9 +114,13 @@ export function parseSessionFile(filePath: string): ParsedSession | null {
 
     if (entry.sessionId && !sessionId) sessionId = entry.sessionId;
     if (entry.cwd && !cwd) cwd = entry.cwd;
+    let entryTs: number | null = null;
     if (entry.timestamp) {
       const t = Date.parse(entry.timestamp);
-      if (!Number.isNaN(t)) timestamps.push(t);
+      if (!Number.isNaN(t)) {
+        timestamps.push(t);
+        entryTs = t;
+      }
     }
 
     if (entry.type === "summary" && entry.summary) {
@@ -129,6 +139,9 @@ export function parseSessionFile(filePath: string): ParsedSession | null {
         }
       }
       messageCount++;
+      if (entryTs !== null) {
+        spanEvents.push({ ts: entryTs, gitBranch: entry.gitBranch ?? null, isMessage: true });
+      }
     } else if (entry.type === "assistant" && msg) {
       messageCount++;
       if (msg.model) models.push(msg.model);
@@ -138,6 +151,27 @@ export function parseSessionFile(filePath: string): ParsedSession | null {
         outputTokens += u.output_tokens ?? 0;
         cacheReadTokens += u.cache_read_input_tokens ?? 0;
         cacheCreationTokens += u.cache_creation_input_tokens ?? 0;
+      }
+      if (entryTs !== null) {
+        const filePaths = Array.isArray(msg.content)
+          ? msg.content
+              .filter((p) => p.type === "tool_use" && p.input?.file_path)
+              .map((p) => p.input!.file_path!)
+          : [];
+        spanEvents.push({
+          ts: entryTs,
+          gitBranch: entry.gitBranch ?? null,
+          isMessage: true,
+          filePaths,
+          usage: u
+            ? {
+                inputTokens: u.input_tokens ?? 0,
+                outputTokens: u.output_tokens ?? 0,
+                cacheReadTokens: u.cache_read_input_tokens ?? 0,
+                cacheCreationTokens: u.cache_creation_input_tokens ?? 0,
+              }
+            : undefined,
+        });
       }
     }
   }
@@ -175,6 +209,8 @@ export function parseSessionFile(filePath: string): ParsedSession | null {
     endedAt: activity.endedAt,
     engagedMs: activity.engagedMs,
     activityIntervals: activity.activityIntervals,
+    spans: buildSpans(spanEvents),
+    localCwd: cwd,
   };
 
   return { metadata, filePath, fingerprint: fingerprintFile(filePath) };

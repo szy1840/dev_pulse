@@ -13,6 +13,7 @@ import {
   type Period,
 } from "@/lib/queries";
 import { getTeamDailySummary, getUserDailySummary } from "@/lib/daily-summary";
+import { getCommitCosts } from "@/lib/attribution";
 import { dayKeyInTimezone, formatDayLabel, formatTimezoneLabel } from "@/lib/timezone";
 import { formatCompact, formatNumber, formatDuration, formatActivityHint, prettyModel, prettyTool } from "@/lib/format";
 import { StatCard } from "@/components/stat-card";
@@ -26,6 +27,7 @@ import { ActivityHeatmapPanel } from "@/components/charts/activity-heatmap-panel
 import { TokenCompositionBar } from "@/components/charts/token-composition-bar";
 import { Sparkline } from "@/components/charts/sparkline";
 import { TeamTodaySummary } from "@/components/team-today-summary";
+import { CommitCosts } from "@/components/commit-costs";
 
 function resolvePeriod(raw?: string): Period {
   return raw === "7d" || raw === "30d" || raw === "all" || raw === "today" ? raw : "7d";
@@ -46,7 +48,7 @@ export default async function OverviewPage({
   const activityGranularity = period === "today" ? "hour" : "day";
   const todaySince = periodStart("today", timeZone);
 
-  const [stats, dailyActivity, models, tools, projects, heatmap, todaySessions, todayStats, membersToday] =
+  const [stats, dailyActivity, models, tools, projects, heatmap, todaySessions, todayStats, membersToday, commitCosts] =
     await Promise.all([
       getTeamStats(team.id, since),
       getDailyActivityWithMembers(team.id, since, { granularity: activityGranularity, timeZone }),
@@ -57,6 +59,7 @@ export default async function OverviewPage({
       getSessionsForSummary(team.id, todaySince),
       getTeamStats(team.id, todaySince),
       getMemberActivity(team.id, todaySince),
+      getCommitCosts(team.id, since),
     ]);
 
   const today = dayKeyInTimezone(new Date(), timeZone);
@@ -221,6 +224,13 @@ export default async function OverviewPage({
           <BarListChart data={projectItems} valueLabel="Sessions" subLabel="Tokens" height={Math.max(160, projectItems.length * 34)} />
         </ChartCard>
       </div>
+
+      {/* Commit costs — what the tokens shipped */}
+      <CommitCosts
+        commits={commitCosts.commits}
+        coverage={commitCosts.coverage}
+        unmatchedCommitCount={commitCosts.unmatchedCommitCount}
+      />
 
       {/* Heatmap */}
       <ChartCard

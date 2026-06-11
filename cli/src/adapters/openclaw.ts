@@ -5,6 +5,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { buildSessionSummary } from "../summary.js";
 import { buildSummaryNotes, cleanUserText } from "../session-notes.js";
 import { ACTIVITY_ALGO_VERSION, buildActivityFromEvents } from "../activity.js";
+import { SPAN_ALGO_VERSION, buildSpans, type SpanEvent } from "../spans.js";
 import type { SessionMetadata } from "../types.js";
 import type { DiscoveredSession, ToolAdapter } from "./types.js";
 
@@ -71,6 +72,21 @@ function textFromContent(content: unknown): string | null {
   return null;
 }
 
+/** File paths from toolCall blocks (read/write/edit carry `arguments.path`). */
+function filePathsFromContent(content: unknown): string[] {
+  if (!Array.isArray(content)) return [];
+  const paths: string[] = [];
+  for (const part of content) {
+    if (part && typeof part === "object") {
+      const p = part as { type?: string; arguments?: { path?: unknown } };
+      if (p.type === "toolCall" && typeof p.arguments?.path === "string") {
+        paths.push(p.arguments.path);
+      }
+    }
+  }
+  return paths;
+}
+
 function mostFrequent(values: string[]): string | null {
   if (values.length === 0) return null;
   const counts = new Map<string, number>();
@@ -91,6 +107,7 @@ function parseOpenclawSession(filePath: string): SessionMetadata | null {
   let cacheCreationTokens = 0;
   const models: string[] = [];
   const timestamps: number[] = [];
+  const spanEvents: SpanEvent[] = [];
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -107,9 +124,13 @@ function parseOpenclawSession(filePath: string): SessionMetadata | null {
       if (entry.cwd && !cwd) cwd = entry.cwd;
     }
     if (entry.type === "model_change" && entry.modelId) models.push(entry.modelId);
+    let entryTs: number | null = null;
     if (entry.timestamp) {
       const t = Date.parse(entry.timestamp);
-      if (!Number.isNaN(t)) timestamps.push(t);
+      if (!Number.isNaN(t)) {
+        timestamps.push(t);
+        entryTs = t;
+      }
     }
 
     const msg = entry.message;
@@ -129,6 +150,22 @@ function parseOpenclawSession(filePath: string): SessionMetadata | null {
         outputTokens += u.output ?? 0;
         cacheReadTokens += u.cacheRead ?? 0;
         cacheCreationTokens += u.cacheWrite ?? 0;
+      }
+      if (entryTs !== null) {
+        // OpenClaw records no git branch; spans cut on idle gaps only.
+        spanEvents.push({
+          ts: entryTs,
+          isMessage: true,
+          filePaths: filePathsFromContent(msg.content),
+          usage: u
+            ? {
+                inputTokens: u.input ?? 0,
+                outputTokens: u.output ?? 0,
+                cacheReadTokens: u.cacheRead ?? 0,
+                cacheCreationTokens: u.cacheWrite ?? 0,
+              }
+            : undefined,
+        });
       }
     }
   }
@@ -165,6 +202,8 @@ function parseOpenclawSession(filePath: string): SessionMetadata | null {
     endedAt: activity.endedAt,
     engagedMs: activity.engagedMs,
     activityIntervals: activity.activityIntervals,
+    spans: buildSpans(spanEvents),
+    localCwd: cwd,
   };
 }
 
@@ -179,7 +218,7 @@ export const openclawAdapter: ToolAdapter = {
   discover(): DiscoveredSession[] {
     return listOpenclawSessions().map((file) => ({
       stateKey: `${TOOL}:${file}`,
-      fingerprint: `${safeFingerprint(file)}:${ACTIVITY_ALGO_VERSION}`,
+      fingerprint: `${safeFingerprint(file)}:${ACTIVITY_ALGO_VERSION}:${SPAN_ALGO_VERSION}`,
       load: () => parseOpenclawSession(file),
     }));
   },

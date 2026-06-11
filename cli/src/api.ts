@@ -1,5 +1,5 @@
 import type { Config } from "./config.js";
-import type { SessionMetadata } from "./types.js";
+import type { CommitMetadata, SessionMetadata } from "./types.js";
 
 export interface VerifyResponse {
   ok: true;
@@ -54,7 +54,21 @@ export function uploadSessions(
   config: Config,
   sessions: SessionMetadata[]
 ): Promise<SyncResponse> {
-  return request<SyncResponse>(config, "/api/cli/sync", { sessions });
+  // localCwd is a machine-local path used by the git collector — never uploaded.
+  const sanitized = sessions.map(({ localCwd: _localCwd, ...rest }) => rest);
+  return request<SyncResponse>(config, "/api/cli/sync", { sessions: sanitized });
+}
+
+export interface CommitSyncResponse {
+  ok: true;
+  upserted: number;
+}
+
+export function uploadCommits(
+  config: Config,
+  commits: CommitMetadata[]
+): Promise<CommitSyncResponse> {
+  return request<CommitSyncResponse>(config, "/api/cli/commits", { commits });
 }
 
 export { ApiError };

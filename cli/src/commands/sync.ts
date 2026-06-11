@@ -1,7 +1,8 @@
 import { loadConfig, loadState, saveState } from "../config.js";
 import { adapters, getAdapter } from "../adapters/index.js";
 import type { DiscoveredSession, ToolAdapter } from "../adapters/index.js";
-import { uploadSessions, ApiError } from "../api.js";
+import { uploadSessions, uploadCommits, ApiError } from "../api.js";
+import { collectFromCwds, hashRepoRoot, resolveRepoRoot } from "../git.js";
 import type { SessionMetadata } from "../types.js";
 import { ui } from "../ui.js";
 
@@ -75,6 +76,18 @@ export async function sync(opts: SyncOptions) {
     if (opts.limit && toUpload.length >= opts.limit) break;
   }
 
+  // Stamp each session with its repo-root hash (the join key against commits).
+  // Resolutions are cached per cwd; non-repo cwds resolve to null.
+  const repoRootByCwd = new Map<string, string | null>();
+  for (const { metadata } of toUpload) {
+    if (!metadata.localCwd) continue;
+    if (!repoRootByCwd.has(metadata.localCwd)) {
+      repoRootByCwd.set(metadata.localCwd, resolveRepoRoot(metadata.localCwd));
+    }
+    const root = repoRootByCwd.get(metadata.localCwd);
+    metadata.repoRootHash = root ? hashRepoRoot(root) : null;
+  }
+
   ui.info(
     `${toUpload.length} new/changed session(s), ${skipped} unchanged (skipped)${
       opts.force ? " — forced full re-sync" : ""
@@ -130,5 +143,33 @@ export async function sync(opts: SyncOptions) {
   saveState(state);
 
   ui.success(`Synced: ${created} new, ${updated} updated.`);
+
+  // Collect local git commits from the repos these sessions worked in. Commit
+  // history anchors span→task attribution; failures here never fail the sync.
+  try {
+    const cwds = toUpload
+      .map((b) => b.metadata.localCwd)
+      .filter((c): c is string => Boolean(c));
+    if (cwds.length > 0) {
+      const watermarks = Object.fromEntries(
+        Object.entries(state.gitRepos ?? {}).map(([k, v]) => [k, v.lastCollectedAt])
+      );
+      const collections = collectFromCwds(cwds, watermarks);
+      const commits = collections.flatMap((c) => c.commits);
+      if (commits.length > 0) {
+        const res = await uploadCommits(config, commits);
+        ui.dim(`Git: ${res.upserted} commit(s) from ${collections.length} repo(s).`);
+      }
+      const now = new Date().toISOString();
+      state.gitRepos = state.gitRepos ?? {};
+      for (const c of collections) {
+        state.gitRepos[c.repoRootHash] = { lastCollectedAt: now };
+      }
+      saveState(state);
+    }
+  } catch (err) {
+    ui.warn(`Git commit sync skipped: ${(err as Error).message}`);
+  }
+
   ui.dim(`View your team dashboard at ${config.apiUrl}/dashboard`);
 }

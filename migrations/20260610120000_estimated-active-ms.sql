@@ -1,0 +1,2 @@
+ALTER TABLE sessions
+  ADD COLUMN IF NOT EXISTS estimated_active_ms BIGINT NOT NULL DEFAULT 0;

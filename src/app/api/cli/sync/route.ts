@@ -11,11 +11,24 @@ import {
 
 export const runtime = "nodejs";
 
+const workSpanSchema = z.object({
+  startedAt: z.string().datetime(),
+  endedAt: z.string().datetime(),
+  gitBranch: z.string().max(300).nullish(),
+  inputTokens: z.number().int().min(0).default(0),
+  outputTokens: z.number().int().min(0).default(0),
+  cacheReadTokens: z.number().int().min(0).default(0),
+  cacheCreationTokens: z.number().int().min(0).default(0),
+  messageCount: z.number().int().min(0).default(0),
+  fileHashes: z.array(z.string().max(32)).max(50).default([]),
+});
+
 const sessionSchema = z.object({
   externalId: z.string().min(1).max(200),
   tool: z.string().min(1).max(60).default("claude-code"),
   model: z.string().max(120).nullish(),
   projectPathHash: z.string().max(80).nullish(),
+  repoRootHash: z.string().max(80).nullish(),
   projectName: z.string().max(200).nullish(),
   summary: z.string().max(2000).nullish(),
   /** Cleaned local notes for server LLM — never persisted. */
@@ -37,6 +50,7 @@ const sessionSchema = z.object({
     )
     .max(200)
     .default([]),
+  spans: z.array(workSpanSchema).max(100).default([]),
 });
 
 const payloadSchema = z.object({
@@ -100,6 +114,10 @@ export async function POST(req: Request) {
       tool: prev.tool ?? s.tool,
       model: prev.model ?? s.model,
       projectPathHash: prev.projectPathHash ?? s.projectPathHash,
+      repoRootHash: prev.repoRootHash ?? s.repoRootHash,
+      spans: [...(prev.spans ?? []), ...(s.spans ?? [])].sort((a, b) =>
+        a.startedAt < b.startedAt ? -1 : 1
+      ),
       projectName: prev.projectName ?? s.projectName,
       summary: prev.summary ?? s.summary,
       summaryNotes: [prev.summaryNotes, s.summaryNotes].filter(Boolean).join("\n\n") || undefined,
@@ -149,6 +167,7 @@ export async function POST(req: Request) {
     tool: s.tool,
     model: s.model ?? null,
     project_path_hash: s.projectPathHash ?? null,
+    repo_root_hash: s.repoRootHash ?? null,
     project_name: s.projectName ?? null,
     summary: summaries[i] ?? s.summary ?? null,
     message_count: s.messageCount,
@@ -171,6 +190,59 @@ export async function POST(req: Request) {
   if (error) {
     console.error("session upsert failed", error);
     return NextResponse.json({ error: "Failed to store sessions" }, { status: 500 });
+  }
+
+  // Replace work spans for the sessions that carried any. Spans derive from a
+  // single transcript parse, so delete + insert is the natural idempotent shape.
+  const withSpans = unique.filter((s) => (s.spans?.length ?? 0) > 0);
+  if (withSpans.length > 0) {
+    const { data: idRows, error: idError } = await admin.database
+      .from("sessions")
+      .select("id, external_id")
+      .eq("user_id", userId)
+      .in("external_id", withSpans.map((s) => s.externalId));
+
+    if (idError) {
+      console.error("span session lookup failed", idError);
+    } else {
+      const idByExternal = new Map(
+        ((idRows as { id: string; external_id: string }[]) ?? []).map((r) => [r.external_id, r.id])
+      );
+      const sessionIds = withSpans
+        .map((s) => idByExternal.get(s.externalId))
+        .filter((id): id is string => Boolean(id));
+
+      const spanRows = withSpans.flatMap((s) => {
+        const sessionId = idByExternal.get(s.externalId);
+        if (!sessionId) return [];
+        return (s.spans ?? []).map((sp, idx) => ({
+          session_id: sessionId,
+          user_id: userId,
+          team_id: teamId,
+          span_index: idx,
+          started_at: sp.startedAt,
+          ended_at: sp.endedAt,
+          git_branch: sp.gitBranch ?? null,
+          message_count: sp.messageCount,
+          input_tokens: sp.inputTokens,
+          output_tokens: sp.outputTokens,
+          cache_read_tokens: sp.cacheReadTokens,
+          cache_creation_tokens: sp.cacheCreationTokens,
+          file_hashes: sp.fileHashes ?? [],
+        }));
+      });
+
+      const { error: delError } = await admin.database
+        .from("work_spans")
+        .delete()
+        .in("session_id", sessionIds);
+      if (delError) {
+        console.error("span delete failed", delError);
+      } else if (spanRows.length > 0) {
+        const { error: spanError } = await admin.database.from("work_spans").insert(spanRows);
+        if (spanError) console.error("span insert failed", spanError);
+      }
+    }
   }
 
   const created = unique.filter((s) => !existingSet.has(s.externalId)).length;
