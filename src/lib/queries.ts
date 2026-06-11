@@ -9,9 +9,12 @@ import {
   weekdayHourInTimezone,
 } from "@/lib/timezone";
 import { computeTeamActivityStats, computeUserActivityStats } from "@/lib/activity";
+import type { QueryRange } from "@/lib/period";
 
+/** @deprecated Legacy rolling periods — use resolveRange from ./period. */
 export type Period = "today" | "7d" | "30d" | "all";
 
+/** @deprecated Use resolveRange from ./period. */
 export function periodStart(period: Period, timeZone = DEFAULT_TIMEZONE): Date | null {
   const now = new Date();
   switch (period) {
@@ -50,10 +53,11 @@ const SESSION_COLUMNS =
   "id, user_id, external_id, tool, model, project_name, summary, message_count, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, started_at, ended_at, engaged_ms, activity_intervals";
 
 /** Fetch every session for a team within an optional time window. */
-async function fetchTeamSessions(teamId: string, since: Date | null): Promise<SessionRow[]> {
+async function fetchTeamSessions(teamId: string, range: QueryRange): Promise<SessionRow[]> {
   const admin = getAdmin();
   let q = admin.database.from("sessions").select(SESSION_COLUMNS).eq("team_id", teamId);
-  if (since) q = q.gte("started_at", since.toISOString());
+  if (range.start) q = q.gte("started_at", range.start.toISOString());
+  if (range.end) q = q.lt("started_at", range.end.toISOString());
   const { data, error } = await q.limit(10000);
   if (error || !data) return [];
   return data as SessionRow[];
@@ -65,8 +69,8 @@ function toDate(v: string | null): Date | null {
 
 export type ActivityGranularity = "day" | "hour";
 
-export async function getTeamStats(teamId: string, since: Date | null) {
-  const rows = await fetchTeamSessions(teamId, since);
+export async function getTeamStats(teamId: string, range: QueryRange) {
+  const rows = await fetchTeamSessions(teamId, range);
   const members = new Set<string>();
   let inputTokens = 0;
   let outputTokens = 0;
@@ -121,15 +125,20 @@ export type MemberDailyActivity = {
 type DayAgg = { sessions: number; inputTokens: number; outputTokens: number };
 
 function fillDailySeries(
-  since: Date | null,
+  range: QueryRange,
   earliest: Date | null,
   map: Map<string, DayAgg>,
   timeZone: string
 ): DailyActivityPoint[] {
-  const startInstant = since ?? earliest;
+  const startInstant = range.start ?? earliest;
   if (!startInstant) return [];
 
-  const endDay = dayKeyInTimezone(new Date(), timeZone);
+  // Fill to the range's last day (end is exclusive), clamped to today.
+  const today = dayKeyInTimezone(new Date(), timeZone);
+  const rangeEndDay = range.end
+    ? dayKeyInTimezone(new Date(range.end.getTime() - 1), timeZone)
+    : today;
+  const endDay = rangeEndDay < today ? rangeEndDay : today;
   let currentDay = dayKeyInTimezone(startInstant, timeZone);
 
   const out: DailyActivityPoint[] = [];
@@ -145,26 +154,28 @@ function fillDailySeries(
 }
 
 function fillHourlySeries(
-  dayStart: Date,
+  range: QueryRange,
   map: Map<string, DayAgg>,
   timeZone: string
 ): DailyActivityPoint[] {
-  const todayDay = dayKeyInTimezone(new Date(), timeZone);
-  const endHour = currentHourInTimezone(timeZone);
+  if (!range.start) return [];
+  const day = dayKeyInTimezone(range.start, timeZone);
+  // Past days render all 24 hours; today stops at the current hour.
+  const isToday = day === dayKeyInTimezone(new Date(), timeZone);
+  const endHour = isToday ? currentHourInTimezone(timeZone) : 23;
   const out: DailyActivityPoint[] = [];
   for (let h = 0; h <= endHour; h++) {
-    const k = `${todayDay}T${String(h).padStart(2, "0")}:00`;
+    const k = `${day}T${String(h).padStart(2, "0")}:00`;
     const v = map.get(k) ?? { sessions: 0, inputTokens: 0, outputTokens: 0 };
     out.push({ date: k, ...v, tokens: v.inputTokens + v.outputTokens });
   }
-  void dayStart;
   return out;
 }
 
 /** Team-wide activity plus per-member series (top contributors + Others). */
 export async function getDailyActivityWithMembers(
   teamId: string,
-  since: Date | null,
+  range: QueryRange,
   options?: { granularity?: ActivityGranularity; timeZone?: string }
 ) {
   const granularity = options?.granularity ?? "day";
@@ -173,7 +184,7 @@ export async function getDailyActivityWithMembers(
     granularity === "hour"
       ? (d: Date) => hourKeyInTimezone(d, timeZone)
       : (d: Date) => dayKeyInTimezone(d, timeZone);
-  const rows = await fetchTeamSessions(teamId, since);
+  const rows = await fetchTeamSessions(teamId, range);
   const teamMap = new Map<string, DayAgg>();
   const byUser = new Map<string, Map<string, DayAgg>>();
   const userTotals = new Map<string, number>();
@@ -206,15 +217,15 @@ export async function getDailyActivityWithMembers(
   }
 
   const team =
-    granularity === "hour" && since
-      ? fillHourlySeries(since, teamMap, timeZone)
-      : fillDailySeries(since, earliest, teamMap, timeZone);
+    granularity === "hour" && range.start
+      ? fillHourlySeries(range, teamMap, timeZone)
+      : fillDailySeries(range, earliest, teamMap, timeZone);
   if (team.length === 0) return { team, members: [] as MemberDailyActivity[] };
 
   const fillSeries = (map: Map<string, DayAgg>) =>
-    granularity === "hour" && since
-      ? fillHourlySeries(since, map, timeZone)
-      : fillDailySeries(since, earliest, map, timeZone);
+    granularity === "hour" && range.start
+      ? fillHourlySeries(range, map, timeZone)
+      : fillDailySeries(range, earliest, map, timeZone);
 
   const userIds = [...byUser.keys()];
   const profilesById = new Map<string, string>();
@@ -264,8 +275,8 @@ export async function getDailyActivityWithMembers(
   return { team, members };
 }
 
-export async function getDailyActivity(teamId: string, since: Date | null) {
-  const { team } = await getDailyActivityWithMembers(teamId, since);
+export async function getDailyActivity(teamId: string, range: QueryRange) {
+  const { team } = await getDailyActivityWithMembers(teamId, range);
   return team;
 }
 
@@ -295,10 +306,10 @@ function buildHeatmapGrid(
 
 export async function getHourlyHeatmapWithMembers(
   teamId: string,
-  since: Date | null,
+  range: QueryRange,
   timeZone = DEFAULT_TIMEZONE
 ): Promise<{ team: HeatmapData; members: MemberHeatmap[] }> {
-  const rows = await fetchTeamSessions(teamId, since);
+  const rows = await fetchTeamSessions(teamId, range);
   const team = buildHeatmapGrid(rows, timeZone);
 
   const byUser = new Map<string, SessionRow[]>();
@@ -340,14 +351,14 @@ export async function getHourlyHeatmapWithMembers(
 }
 
 /** @deprecated Prefer getHourlyHeatmapWithMembers */
-export async function getHourlyHeatmap(teamId: string, since: Date | null, timeZone = DEFAULT_TIMEZONE) {
-  const { team } = await getHourlyHeatmapWithMembers(teamId, since, timeZone);
+export async function getHourlyHeatmap(teamId: string, range: QueryRange, timeZone = DEFAULT_TIMEZONE) {
+  const { team } = await getHourlyHeatmapWithMembers(teamId, range, timeZone);
   return team;
 }
 
 /** Sessions and tokens grouped by project, busiest first. */
-export async function getProjectBreakdown(teamId: string, since: Date | null) {
-  const rows = await fetchTeamSessions(teamId, since);
+export async function getProjectBreakdown(teamId: string, range: QueryRange) {
+  const rows = await fetchTeamSessions(teamId, range);
   const map = new Map<string, { sessions: number; tokens: number }>();
   for (const r of rows) {
     const key = r.project_name ?? "Unknown";
@@ -361,8 +372,8 @@ export async function getProjectBreakdown(teamId: string, since: Date | null) {
     .sort((a, b) => b.sessions - a.sessions);
 }
 
-export async function getModelBreakdown(teamId: string, since: Date | null) {
-  const rows = await fetchTeamSessions(teamId, since);
+export async function getModelBreakdown(teamId: string, range: QueryRange) {
+  const rows = await fetchTeamSessions(teamId, range);
   const map = new Map<string, { sessionCount: number; tokens: number }>();
   for (const r of rows) {
     const key = r.model ?? "unknown";
@@ -376,8 +387,8 @@ export async function getModelBreakdown(teamId: string, since: Date | null) {
     .sort((a, b) => b.sessionCount - a.sessionCount);
 }
 
-export async function getToolBreakdown(teamId: string, since: Date | null) {
-  const rows = await fetchTeamSessions(teamId, since);
+export async function getToolBreakdown(teamId: string, range: QueryRange) {
+  const rows = await fetchTeamSessions(teamId, range);
   const map = new Map<string, number>();
   for (const r of rows) map.set(r.tool, (map.get(r.tool) ?? 0) + 1);
   return [...map.entries()]
@@ -385,12 +396,12 @@ export async function getToolBreakdown(teamId: string, since: Date | null) {
     .sort((a, b) => b.sessionCount - a.sessionCount);
 }
 
-export async function getMemberActivity(teamId: string, since: Date | null) {
+export async function getMemberActivity(teamId: string, range: QueryRange) {
   const admin = getAdmin();
 
   const [{ data: memberData }, sessions] = await Promise.all([
     admin.database.from("team_members").select("user_id, role").eq("team_id", teamId),
-    fetchTeamSessions(teamId, since),
+    fetchTeamSessions(teamId, range),
   ]);
 
   const members = (memberData as { user_id: string; role: string }[] | null) ?? [];
@@ -467,10 +478,11 @@ export async function getMemberActivity(teamId: string, since: Date | null) {
     .sort((a, b) => b.sessionCount - a.sessionCount);
 }
 
-export async function getRecentSessions(teamId: string, since: Date | null, limit = 50) {
+export async function getRecentSessions(teamId: string, range: QueryRange, limit = 50) {
   const admin = getAdmin();
   let q = admin.database.from("sessions").select(SESSION_COLUMNS).eq("team_id", teamId);
-  if (since) q = q.gte("started_at", since.toISOString());
+  if (range.start) q = q.gte("started_at", range.start.toISOString());
+  if (range.end) q = q.lt("started_at", range.end.toISOString());
   const { data, error } = await q.order("started_at", { ascending: false }).limit(limit);
   if (error || !data) return [];
   const rows = data as SessionRow[];
@@ -505,8 +517,8 @@ export async function getRecentSessions(teamId: string, since: Date | null, limi
 }
 
 /** Raw sessions for summary building (single user or whole team) within a window. */
-export async function getSessionsForSummary(teamId: string, since: Date | null, userId?: string) {
-  const rows = await fetchTeamSessions(teamId, since);
+export async function getSessionsForSummary(teamId: string, range: QueryRange, userId?: string) {
+  const rows = await fetchTeamSessions(teamId, range);
   const filtered = userId ? rows.filter((r) => r.user_id === userId) : rows;
   return filtered.map((s) => ({
     userId: s.user_id,

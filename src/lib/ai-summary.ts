@@ -66,15 +66,17 @@ const WORK_FOCUS =
   "Do NOT mention token counts, model names, session counts, or generic phrases like 'AI-assisted code change'. " +
   "Write 1-2 plain sentences. No markdown, no preamble, no bullet points.";
 
-const USER_SYSTEM =
-  "You write a concise daily recap of one engineer's AI coding activity for a team dashboard. " + WORK_FOCUS;
+// Period phrase ("today" / "this week" / "in June 2026") flows into the prompt
+// so the same machinery summarizes any calendar period.
+const userSystem = (phrase: string) =>
+  `You write a concise recap of one engineer's AI coding activity ${phrase} for a team dashboard. ` + WORK_FOCUS;
 
-const USER_TOOL_SYSTEM =
-  "You write a concise daily recap of one engineer's work with a specific AI coding agent for a team dashboard. " +
+const userToolSystem = (phrase: string) =>
+  `You write a concise recap of one engineer's work with a specific AI coding agent ${phrase} for a team dashboard. ` +
   WORK_FOCUS;
 
-const TEAM_SYSTEM =
-  "You write a concise daily recap of an engineering team's AI coding activity for a dashboard. " + WORK_FOCUS;
+const teamSystem = (phrase: string) =>
+  `You write a concise recap of an engineering team's AI coding activity ${phrase} for a dashboard. ` + WORK_FOCUS;
 
 function storedModel(model: string | null): string {
   return model ? `${model}:${SUMMARY_VERSION}` : SUMMARY_VERSION;
@@ -86,7 +88,11 @@ export function isStoredSummaryFresh(storedModel: string | null): boolean {
 }
 
 /** LLM daily summary for one user, falling back to the rule-based version. */
-export async function generateUserDaily(name: string, sessions: SessionLike[]): Promise<GeneratedSummary> {
+export async function generateUserDaily(
+  name: string,
+  sessions: SessionLike[],
+  periodPhrase = "today"
+): Promise<GeneratedSummary> {
   const fallback = buildDailyUserSummary(name, sessions);
   if (sessions.length === 0) return { text: fallback, model: null };
 
@@ -99,7 +105,7 @@ export async function generateUserDaily(name: string, sessions: SessionLike[]): 
     .filter(Boolean)
     .join("\n");
 
-  const text = await complete(USER_SYSTEM, prompt);
+  const text = await complete(userSystem(periodPhrase), prompt);
   return text ? { text, model: storedModel(MODEL) } : { text: fallback, model: SUMMARY_VERSION };
 }
 
@@ -107,7 +113,8 @@ export async function generateUserDaily(name: string, sessions: SessionLike[]): 
 export async function generateUserToolDaily(
   name: string,
   tool: string,
-  sessions: SessionLike[]
+  sessions: SessionLike[],
+  periodPhrase = "today"
 ): Promise<GeneratedSummary> {
   const fallback = buildDailyUserToolSummary(name, tool, sessions);
   if (sessions.length === 0) return { text: fallback, model: null };
@@ -123,7 +130,7 @@ export async function generateUserToolDaily(
     .filter(Boolean)
     .join("\n");
 
-  const text = await complete(USER_TOOL_SYSTEM, prompt);
+  const text = await complete(userToolSystem(periodPhrase), prompt);
   return text ? { text, model: storedModel(MODEL) } : { text: fallback, model: SUMMARY_VERSION };
 }
 
@@ -131,7 +138,8 @@ export async function generateUserToolDaily(
 export async function generateTeamDaily(
   teamName: string,
   sessions: SessionLike[],
-  activeMembers: number
+  activeMembers: number,
+  periodPhrase = "today"
 ): Promise<GeneratedSummary> {
   const fallback = buildDailyTeamSummary(teamName, sessions, activeMembers);
   if (sessions.length === 0) return { text: fallback, model: null };
@@ -139,13 +147,13 @@ export async function generateTeamDaily(
   const { projects, notes } = workContext(sessions);
   const prompt = [
     `Team: ${teamName}`,
-    `Active members today: ${activeMembers}`,
+    `Active members: ${activeMembers}`,
     `Projects touched: ${projects.join(", ") || "unknown"}`,
     notes.length ? `Session notes:\n- ${notes.join("\n- ")}` : "",
   ]
     .filter(Boolean)
     .join("\n");
 
-  const text = await complete(TEAM_SYSTEM, prompt);
+  const text = await complete(teamSystem(periodPhrase), prompt);
   return text ? { text, model: storedModel(MODEL) } : { text: fallback, model: SUMMARY_VERSION };
 }

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getAdmin } from "@/lib/insforge/admin";
-import { getSessionsForSummary, periodStart } from "@/lib/queries";
+import { getSessionsForSummary } from "@/lib/queries";
 import { getTeamDailySummary, getUserDailySummary } from "@/lib/daily-summary";
-import { dayKeyInTimezone, DEFAULT_TIMEZONE } from "@/lib/timezone";
+import { DEFAULT_TIMEZONE } from "@/lib/timezone";
+import { resolveRange } from "@/lib/period";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -25,13 +26,13 @@ export async function POST(req: Request) {
   const teams = (teamData as { id: string; name: string }[] | null) ?? [];
 
   const timeZone = DEFAULT_TIMEZONE;
-  const today = dayKeyInTimezone(new Date(), timeZone);
-  const since = periodStart("today", timeZone);
+  const range = resolveRange("day", undefined, timeZone);
+  const today = range.anchor;
   let teamsDone = 0;
   let usersDone = 0;
 
   for (const team of teams) {
-    const sessions = await getSessionsForSummary(team.id, since);
+    const sessions = await getSessionsForSummary(team.id, range);
     const activeMembers = new Set(sessions.map((s) => s.userId)).size;
 
     await getTeamDailySummary(team.id, team.name, today, timeZone, sessions, activeMembers);

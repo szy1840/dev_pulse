@@ -9,12 +9,11 @@ import {
   getHourlyHeatmapWithMembers,
   getMemberActivity,
   getSessionsForSummary,
-  periodStart,
-  type Period,
 } from "@/lib/queries";
-import { getTeamDailySummary, getUserDailySummary } from "@/lib/daily-summary";
+import { resolveRange, type PeriodRange } from "@/lib/period";
+import { getTeamPeriodSummary, getUserPeriodSummary } from "@/lib/daily-summary";
 import { getCommitCosts } from "@/lib/attribution";
-import { dayKeyInTimezone, formatDayLabel, formatTimezoneLabel } from "@/lib/timezone";
+import { formatTimezoneLabel } from "@/lib/timezone";
 import { formatCompact, formatNumber, formatDuration, formatActivityHint, prettyModel, prettyTool } from "@/lib/format";
 import { StatCard } from "@/components/stat-card";
 import { PeriodSelector } from "@/components/period-selector";
@@ -29,70 +28,75 @@ import { Sparkline } from "@/components/charts/sparkline";
 import { TeamTodaySummary } from "@/components/team-today-summary";
 import { CommitCosts } from "@/components/commit-costs";
 
-function resolvePeriod(raw?: string): Period {
-  return raw === "7d" || raw === "30d" || raw === "all" || raw === "today" ? raw : "7d";
+function summaryHeading(range: PeriodRange): string {
+  switch (range.view) {
+    case "day":
+      return range.isCurrent ? "Today's team summary" : "Daily team summary";
+    case "week":
+      return range.isCurrent ? "This week's team summary" : "Weekly team summary";
+    case "month":
+      return range.isCurrent ? "This month's team summary" : "Monthly team summary";
+    case "all":
+      return "All-time team summary";
+  }
 }
 
 export default async function OverviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string }>;
+  searchParams: Promise<{ view?: string; anchor?: string; period?: string }>;
 }) {
   const userId = await requireUserId();
   const team = await getActiveTeam(userId);
   if (!team) return null; // layout redirects to onboarding
 
-  const period = resolvePeriod((await searchParams).period);
+  const params = await searchParams;
   const timeZone = await getViewerTimezone(userId);
-  const since = periodStart(period, timeZone);
-  const activityGranularity = period === "today" ? "hour" : "day";
-  const todaySince = periodStart("today", timeZone);
+  const range = resolveRange(params.view ?? params.period, params.anchor, timeZone);
+  const activityGranularity = range.view === "day" ? "hour" : "day";
 
-  const [stats, dailyActivity, models, tools, projects, heatmap, todaySessions, todayStats, membersToday, commitCosts] =
+  const [stats, dailyActivity, models, tools, projects, heatmap, periodSessions, members, commitCosts] =
     await Promise.all([
-      getTeamStats(team.id, since),
-      getDailyActivityWithMembers(team.id, since, { granularity: activityGranularity, timeZone }),
-      getModelBreakdown(team.id, since),
-      getToolBreakdown(team.id, since),
-      getProjectBreakdown(team.id, since),
-      getHourlyHeatmapWithMembers(team.id, since, timeZone),
-      getSessionsForSummary(team.id, todaySince),
-      getTeamStats(team.id, todaySince),
-      getMemberActivity(team.id, todaySince),
-      getCommitCosts(team.id, since),
+      getTeamStats(team.id, range),
+      getDailyActivityWithMembers(team.id, range, { granularity: activityGranularity, timeZone }),
+      getModelBreakdown(team.id, range),
+      getToolBreakdown(team.id, range),
+      getProjectBreakdown(team.id, range),
+      getHourlyHeatmapWithMembers(team.id, range, timeZone),
+      getSessionsForSummary(team.id, range),
+      getMemberActivity(team.id, range),
+      getCommitCosts(team.id, range),
     ]);
 
-  const today = dayKeyInTimezone(new Date(), timeZone);
-  const todayLabel = formatDayLabel(today, timeZone);
-  const byUser = new Map<string, typeof todaySessions>();
-  for (const s of todaySessions) {
+  const byUser = new Map<string, typeof periodSessions>();
+  for (const s of periodSessions) {
     const list = byUser.get(s.userId) ?? [];
     list.push(s);
     byUser.set(s.userId, list);
   }
 
-  const teamSummary = await getTeamDailySummary(
+  const teamSummary = await getTeamPeriodSummary(
     team.id,
     team.name,
-    today,
+    range,
     timeZone,
-    todaySessions,
-    todayStats.activeMembers
+    periodSessions,
+    stats.activeMembers
   );
 
   const memberSummaries = await Promise.all(
-    membersToday
+    members
       .filter((m) => m.sessionCount > 0)
       .map(async (m) => ({
         userId: m.userId,
         name: m.name ?? "Member",
         imageUrl: m.imageUrl,
         sessionCount: m.sessionCount,
-        overall: await getUserDailySummary(
+        overall: await getUserPeriodSummary(
           team.id,
           m.userId,
           m.name ?? "Member",
-          today,
+          range,
           timeZone,
           byUser.get(m.userId) ?? []
         ),
@@ -123,16 +127,23 @@ export default async function OverviewPage({
           <h1 className="text-xl font-semibold">{team.name}</h1>
           <p className="text-sm text-muted-foreground">Team AI usage overview</p>
         </div>
-        <PeriodSelector value={period} />
+        <PeriodSelector
+          view={range.view}
+          label={range.shortLabel}
+          prevAnchor={range.prevAnchor}
+          nextAnchor={range.nextAnchor}
+          isCurrent={range.isCurrent}
+        />
       </div>
 
       <TeamTodaySummary
         teamName={team.name}
         summary={teamSummary}
-        todayLabel={todayLabel}
-        timezoneLabel={formatTimezoneLabel(timeZone)}
-        sessionCount={todayStats.sessionCount}
-        activeMembers={todayStats.activeMembers}
+        heading={summaryHeading(range)}
+        periodLabel={range.label}
+        timezoneLabel={range.view === "all" ? undefined : formatTimezoneLabel(timeZone)}
+        sessionCount={stats.sessionCount}
+        activeMembers={stats.activeMembers}
         members={memberSummaries}
       />
 
@@ -174,8 +185,8 @@ export default async function OverviewPage({
       <ChartCard
         title="Activity over time"
         description={
-          period === "today"
-            ? "Hourly tokens and sessions today — team total or split by member"
+          range.view === "day"
+            ? "Hourly tokens and sessions — team total or split by member"
             : "Daily tokens and sessions — team total or split by member"
         }
         icon={<Activity className="h-4 w-4" />}

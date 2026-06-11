@@ -1,7 +1,8 @@
 import { getAdmin } from "./insforge/admin";
 import { generateUserDaily, generateUserToolDaily, generateTeamDaily, isStoredSummaryFresh } from "./ai-summary";
-import type { SessionLike } from "./summary";
+import { buildDailyTeamSummary, buildDailyUserSummary, type SessionLike } from "./summary";
 import { dayKeyInTimezone, DEFAULT_TIMEZONE } from "./timezone";
+import type { PeriodRange } from "./period";
 
 /** @deprecated Use dayKeyInTimezone from ./timezone */
 export function dayKey(d = new Date()): string {
@@ -16,7 +17,8 @@ async function getStored(
   scopeId: string,
   day: string,
   timeZone: string,
-  tool = ""
+  tool = "",
+  granularity = "day"
 ): Promise<StoredRow | null> {
   const admin = getAdmin();
   const { data } = await admin.database
@@ -28,6 +30,7 @@ async function getStored(
     .eq("day", day)
     .eq("tool", tool)
     .eq("timezone", timeZone)
+    .eq("granularity", granularity)
     .maybeSingle();
   return (data as StoredRow | null) ?? null;
 }
@@ -41,7 +44,8 @@ async function store(
   summary: string,
   model: string | null,
   sessionCount: number,
-  tool = ""
+  tool = "",
+  granularity = "day"
 ) {
   const admin = getAdmin();
   const { error } = await admin.database.from("daily_summaries").upsert(
@@ -53,12 +57,13 @@ async function store(
         day,
         tool,
         timezone: timeZone,
+        granularity,
         summary,
         model,
         session_count: sessionCount,
       },
     ],
-    { onConflict: "team_id,scope,scope_id,day,tool,timezone" }
+    { onConflict: "team_id,scope,scope_id,day,tool,timezone,granularity" }
   );
   if (error) console.error("daily_summaries upsert failed", error);
 }
@@ -122,6 +127,74 @@ export async function getUserToolDailySummary(
   return text;
 }
 
+/**
+ * Period-scoped team summary: same caching machinery as the daily path, keyed
+ * by (period start day, granularity). "all" is uncacheable and low-value as an
+ * LLM call — it gets the rule-based recap.
+ */
+export async function getTeamPeriodSummary(
+  teamId: string,
+  teamName: string,
+  range: PeriodRange,
+  timeZone: string,
+  sessions: SessionLike[],
+  activeMembers: number
+): Promise<string> {
+  if (range.view === "all") {
+    return buildDailyTeamSummary(teamName, sessions, activeMembers);
+  }
+
+  const existing = await getStored(teamId, "team", teamId, range.anchor, timeZone, "", range.view);
+  if (existing && isFresh(existing, sessions.length)) return existing.summary;
+
+  const { text, model } = await generateTeamDaily(teamName, sessions, activeMembers, range.phrase);
+  await store(teamId, "team", teamId, range.anchor, timeZone, text, model, sessions.length, "", range.view);
+  return text;
+}
+
+/** Period-scoped per-user summary (overall line). */
+export async function getUserPeriodSummary(
+  teamId: string,
+  userId: string,
+  name: string,
+  range: PeriodRange,
+  timeZone: string,
+  sessions: SessionLike[]
+): Promise<string> {
+  if (range.view === "all") {
+    return buildDailyUserSummary(name, sessions);
+  }
+
+  const existing = await getStored(teamId, "user", userId, range.anchor, timeZone, "", range.view);
+  if (existing && isFresh(existing, sessions.length)) return existing.summary;
+
+  const { text, model } = await generateUserDaily(name, sessions, range.phrase);
+  await store(teamId, "user", userId, range.anchor, timeZone, text, model, sessions.length, "", range.view);
+  return text;
+}
+
+/** Period-scoped per-user-per-tool summary. */
+async function getUserToolPeriodSummary(
+  teamId: string,
+  userId: string,
+  name: string,
+  tool: string,
+  range: PeriodRange,
+  timeZone: string,
+  sessions: SessionLike[]
+): Promise<string> {
+  if (range.view === "all") {
+    return buildDailyUserSummary(name, sessions);
+  }
+
+  const existing = await getStored(teamId, "user", userId, range.anchor, timeZone, tool, range.view);
+  if (existing && isFresh(existing, sessions.length)) return existing.summary;
+
+  const { text, model } = await generateUserToolDaily(name, tool, sessions, range.phrase);
+  await store(teamId, "user", userId, range.anchor, timeZone, text, model, sessions.length, tool, range.view);
+  return text;
+}
+
 export type ToolTodaySummary = {
   tool: string;
   summary: string;
@@ -133,12 +206,12 @@ export type UserTodaySummaries = {
   byTool: ToolTodaySummary[];
 };
 
-/** Overall + per-agent summaries for a member's sessions today. */
-export async function getUserTodaySummaries(
+/** Overall + per-agent summaries for a member's sessions in a period. */
+export async function getUserPeriodSummaries(
   teamId: string,
   userId: string,
   name: string,
-  day: string,
+  range: PeriodRange,
   timeZone: string,
   sessions: SessionLike[]
 ): Promise<UserTodaySummaries> {
@@ -154,9 +227,9 @@ export async function getUserTodaySummaries(
   );
 
   const [overall, ...toolSummaries] = await Promise.all([
-    getUserDailySummary(teamId, userId, name, day, timeZone, sessions),
+    getUserPeriodSummary(teamId, userId, name, range, timeZone, sessions),
     ...tools.map((tool) =>
-      getUserToolDailySummary(teamId, userId, name, tool, day, timeZone, byToolMap.get(tool) ?? [])
+      getUserToolPeriodSummary(teamId, userId, name, tool, range, timeZone, byToolMap.get(tool) ?? [])
     ),
   ]);
 

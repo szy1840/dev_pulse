@@ -1,9 +1,9 @@
 import { formatDistanceToNow } from "date-fns";
 import { Users, Coins } from "lucide-react";
 import { requireUserId, getActiveTeam, getViewerTimezone } from "@/lib/auth";
-import { getMemberActivity, getSessionsForSummary, periodStart, type Period } from "@/lib/queries";
-import { getUserTodaySummaries } from "@/lib/daily-summary";
-import { dayKeyInTimezone } from "@/lib/timezone";
+import { getMemberActivity, getSessionsForSummary } from "@/lib/queries";
+import { getUserPeriodSummaries } from "@/lib/daily-summary";
+import { resolveRange } from "@/lib/period";
 import { MemberTodayPanel } from "@/components/member-today-panel";
 import { formatCompact, formatNumber, formatDuration, formatActivityHint } from "@/lib/format";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,46 +15,41 @@ import { ChartCard } from "@/components/charts/chart-card";
 import { BarListChart } from "@/components/charts/bar-list-chart";
 import { DonutChart } from "@/components/charts/donut-chart";
 
-function resolvePeriod(raw?: string): Period {
-  return raw === "7d" || raw === "30d" || raw === "all" || raw === "today" ? raw : "7d";
-}
-
 export default async function MembersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string }>;
+  searchParams: Promise<{ view?: string; anchor?: string; period?: string }>;
 }) {
   const userId = await requireUserId();
   const team = await getActiveTeam(userId);
   if (!team) return null;
 
-  const period = resolvePeriod((await searchParams).period);
+  const params = await searchParams;
   const timeZone = await getViewerTimezone(userId);
-  const todaySince = periodStart("today", timeZone);
-  const [members, todaySessions] = await Promise.all([
-    getMemberActivity(team.id, periodStart(period, timeZone)),
-    getSessionsForSummary(team.id, todaySince),
+  const range = resolveRange(params.view ?? params.period, params.anchor, timeZone);
+  const [members, periodSessions] = await Promise.all([
+    getMemberActivity(team.id, range),
+    getSessionsForSummary(team.id, range),
   ]);
 
-  // Group today's sessions per user for the per-member daily summary line.
-  const byUser = new Map<string, typeof todaySessions>();
-  for (const s of todaySessions) {
+  // Group the period's sessions per user for the per-member summary line.
+  const byUser = new Map<string, typeof periodSessions>();
+  for (const s of periodSessions) {
     const list = byUser.get(s.userId) ?? [];
     list.push(s);
     byUser.set(s.userId, list);
   }
 
-  // Generate (or read cached) today's per-member summaries in parallel.
-  const today = dayKeyInTimezone(new Date(), timeZone);
-  const todaySummaries = new Map(
+  // Generate (or read cached) period summaries per member in parallel.
+  const periodSummaries = new Map(
     await Promise.all(
       members.map(async (m) => [
         m.userId,
-        await getUserTodaySummaries(
+        await getUserPeriodSummaries(
           team.id,
           m.userId,
           m.name ?? "This member",
-          today,
+          range,
           timeZone,
           byUser.get(m.userId) ?? []
         ),
@@ -77,7 +72,13 @@ export default async function MembersPage({
           <h1 className="text-xl font-semibold">Members</h1>
           <p className="text-sm text-muted-foreground">Per-member activity and daily summaries</p>
         </div>
-        <PeriodSelector value={period} />
+        <PeriodSelector
+          view={range.view}
+          label={range.shortLabel}
+          prevAnchor={range.prevAnchor}
+          nextAnchor={range.nextAnchor}
+          isCurrent={range.isCurrent}
+        />
       </div>
 
       {active.length > 0 && (
@@ -150,8 +151,12 @@ export default async function MembersPage({
                 </div>
               )}
               <MemberTodayPanel
-                overall={todaySummaries.get(m.userId)?.overall ?? `${m.name ?? "Member"} had no AI coding sessions today.`}
-                byTool={todaySummaries.get(m.userId)?.byTool ?? []}
+                overall={
+                  periodSummaries.get(m.userId)?.overall ??
+                  `${m.name ?? "Member"} had no AI coding sessions in this period.`
+                }
+                byTool={periodSummaries.get(m.userId)?.byTool ?? []}
+                periodWord={range.shortLabel}
               />
             </CardContent>
           </Card>

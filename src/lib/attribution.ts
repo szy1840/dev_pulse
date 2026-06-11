@@ -1,4 +1,5 @@
 import { getAdmin } from "@/lib/insforge/admin";
+import type { QueryRange } from "@/lib/period";
 
 /**
  * Span ↔ commit time-window attribution.
@@ -94,7 +95,7 @@ export type CommitAttribution = {
  */
 export async function getCommitAttribution(
   teamId: string,
-  since: Date | null,
+  range: QueryRange,
   options?: { userId?: string }
 ): Promise<CommitAttribution> {
   const admin = getAdmin();
@@ -105,7 +106,8 @@ export async function getCommitAttribution(
     .select("id, repo_root_hash, project_name, tool")
     .eq("team_id", teamId)
     .not("repo_root_hash", "is", null);
-  if (since) sessionQ = sessionQ.gte("started_at", since.toISOString());
+  if (range.start) sessionQ = sessionQ.gte("started_at", range.start.toISOString());
+  if (range.end) sessionQ = sessionQ.lt("started_at", range.end.toISOString());
   if (options?.userId) sessionQ = sessionQ.eq("user_id", options.userId);
 
   let spanQ = admin.database
@@ -114,7 +116,8 @@ export async function getCommitAttribution(
       "id, session_id, user_id, started_at, ended_at, git_branch, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, message_count"
     )
     .eq("team_id", teamId);
-  if (since) spanQ = spanQ.gte("started_at", since.toISOString());
+  if (range.start) spanQ = spanQ.gte("started_at", range.start.toISOString());
+  if (range.end) spanQ = spanQ.lt("started_at", range.end.toISOString());
   if (options?.userId) spanQ = spanQ.eq("user_id", options.userId);
 
   // Commits slightly outside the window can still claim in-window spans.
@@ -124,7 +127,8 @@ export async function getCommitAttribution(
       "id, user_id, repo_root_hash, sha, author_email, authored_at, subject, branch, files_changed, insertions, deletions"
     )
     .eq("team_id", teamId);
-  if (since) commitQ = commitQ.gte("authored_at", since.toISOString());
+  if (range.start) commitQ = commitQ.gte("authored_at", range.start.toISOString());
+  if (range.end) commitQ = commitQ.lt("authored_at", range.end.toISOString());
   if (options?.userId) commitQ = commitQ.eq("user_id", options.userId);
 
   const [{ data: sessionData }, { data: spanData }, { data: commitData }] = await Promise.all([
@@ -259,14 +263,14 @@ export type CommitCostRow = AttributedCommit & { userName: string | null };
 /** Attribution plus display names, ready for the dashboard card. */
 export async function getCommitCosts(
   teamId: string,
-  since: Date | null,
+  range: QueryRange,
   limit = 10
 ): Promise<{
   commits: CommitCostRow[];
   coverage: AttributionCoverage;
   unmatchedCommitCount: number;
 }> {
-  const { commits, coverage } = await getCommitAttribution(teamId, since);
+  const { commits, coverage } = await getCommitAttribution(teamId, range);
 
   const attributed = commits.filter((c) => c.spanCount > 0);
   const userIds = [...new Set(attributed.map((c) => c.userId))];

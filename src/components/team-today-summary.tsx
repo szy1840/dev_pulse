@@ -7,7 +7,8 @@ import { TeamTodayMembersExpand, type TeamMemberToday } from "@/components/team-
 export function TeamTodaySummary({
   teamName,
   summary,
-  todayLabel,
+  heading,
+  periodLabel,
   timezoneLabel,
   sessionCount,
   activeMembers,
@@ -15,7 +16,10 @@ export function TeamTodaySummary({
 }: {
   teamName: string;
   summary: string;
-  todayLabel: string;
+  /** e.g. "Today's team summary" / "This week's team summary". */
+  heading: string;
+  /** Concrete period label, e.g. "Jun 9 – Jun 15, 2026". */
+  periodLabel: string;
   timezoneLabel?: string;
   sessionCount: number;
   activeMembers: number;
@@ -48,9 +52,9 @@ export function TeamTodaySummary({
           <div className="min-w-0 flex-1 space-y-3">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-0.5">
-                <h2 className="text-base font-semibold tracking-tight">Today&apos;s team summary</h2>
+                <h2 className="text-base font-semibold tracking-tight">{heading}</h2>
                 <p className="text-xs text-muted-foreground">
-                  {todayLabel}
+                  {periodLabel}
                   {timezoneLabel ? ` (${timezoneLabel})` : ""} · {teamName}
                 </p>
               </div>

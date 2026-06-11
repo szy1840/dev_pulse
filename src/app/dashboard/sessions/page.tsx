@@ -1,13 +1,8 @@
 import { formatDistanceToNow } from "date-fns";
 import { Cpu, Wrench } from "lucide-react";
 import { requireUserId, getActiveTeam, getViewerTimezone } from "@/lib/auth";
-import {
-  getRecentSessions,
-  getModelBreakdown,
-  getToolBreakdown,
-  periodStart,
-  type Period,
-} from "@/lib/queries";
+import { getRecentSessions, getModelBreakdown, getToolBreakdown } from "@/lib/queries";
+import { resolveRange } from "@/lib/period";
 import { formatCompact, formatDuration, prettyModel, prettyTool } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -19,26 +14,22 @@ import { ChartCard } from "@/components/charts/chart-card";
 import { DonutChart } from "@/components/charts/donut-chart";
 import { RadialChart } from "@/components/charts/radial-chart";
 
-function resolvePeriod(raw?: string): Period {
-  return raw === "7d" || raw === "30d" || raw === "all" || raw === "today" ? raw : "7d";
-}
-
 export default async function SessionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string }>;
+  searchParams: Promise<{ view?: string; anchor?: string; period?: string }>;
 }) {
   const userId = await requireUserId();
   const team = await getActiveTeam(userId);
   if (!team) return null;
 
-  const period = resolvePeriod((await searchParams).period);
+  const params = await searchParams;
   const timeZone = await getViewerTimezone(userId);
-  const since = periodStart(period, timeZone);
+  const range = resolveRange(params.view ?? params.period, params.anchor, timeZone);
   const [rows, models, tools] = await Promise.all([
-    getRecentSessions(team.id, since, 100),
-    getModelBreakdown(team.id, since),
-    getToolBreakdown(team.id, since),
+    getRecentSessions(team.id, range, 100),
+    getModelBreakdown(team.id, range),
+    getToolBreakdown(team.id, range),
   ]);
 
   const modelSlices = models.slice(0, 6).map((m) => ({ name: prettyModel(m.model), value: m.sessionCount }));
@@ -51,7 +42,13 @@ export default async function SessionsPage({
           <h1 className="text-xl font-semibold">Sessions</h1>
           <p className="text-sm text-muted-foreground">AI coding sessions synced by your team</p>
         </div>
-        <PeriodSelector value={period} />
+        <PeriodSelector
+          view={range.view}
+          label={range.shortLabel}
+          prevAnchor={range.prevAnchor}
+          nextAnchor={range.nextAnchor}
+          isCurrent={range.isCurrent}
+        />
       </div>
 
       {rows.length > 0 && (
