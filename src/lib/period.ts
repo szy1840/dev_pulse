@@ -199,3 +199,27 @@ export interface QueryRange {
   start: Date | null;
   end: Date | null;
 }
+
+/**
+ * Bounds of the period immediately before `range`, for period-over-period
+ * comparisons. Null for all-time (nothing to compare against).
+ */
+export function previousQueryRange(range: PeriodRange, timeZone: string): QueryRange | null {
+  if (range.view === "all" || !range.prevAnchor) return null;
+  const prev = resolveRange(range.view, range.prevAnchor, timeZone);
+  return { start: prev.start, end: prev.end };
+}
+
+/** Short label for delta hints, e.g. "vs prev day". */
+export function previousPeriodWord(view: ViewGranularity): string {
+  switch (view) {
+    case "day":
+      return "vs prev day";
+    case "week":
+      return "vs prev week";
+    case "month":
+      return "vs prev month";
+    case "all":
+      return "";
+  }
+}

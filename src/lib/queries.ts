@@ -52,10 +52,15 @@ type SessionRow = {
 const SESSION_COLUMNS =
   "id, user_id, external_id, tool, model, project_name, summary, message_count, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, started_at, ended_at, engaged_ms, activity_intervals";
 
-/** Fetch every session for a team within an optional time window. */
-async function fetchTeamSessions(teamId: string, range: QueryRange): Promise<SessionRow[]> {
+/** Fetch every session for a team within an optional time window, optionally scoped to one member. */
+async function fetchTeamSessions(
+  teamId: string,
+  range: QueryRange,
+  userId?: string
+): Promise<SessionRow[]> {
   const admin = getAdmin();
   let q = admin.database.from("sessions").select(SESSION_COLUMNS).eq("team_id", teamId);
+  if (userId) q = q.eq("user_id", userId);
   if (range.start) q = q.gte("started_at", range.start.toISOString());
   if (range.end) q = q.lt("started_at", range.end.toISOString());
   const { data, error } = await q.limit(10000);
@@ -69,8 +74,8 @@ function toDate(v: string | null): Date | null {
 
 export type ActivityGranularity = "day" | "hour";
 
-export async function getTeamStats(teamId: string, range: QueryRange) {
-  const rows = await fetchTeamSessions(teamId, range);
+export async function getTeamStats(teamId: string, range: QueryRange, userId?: string) {
+  const rows = await fetchTeamSessions(teamId, range, userId);
   const members = new Set<string>();
   let inputTokens = 0;
   let outputTokens = 0;
@@ -280,6 +285,38 @@ export async function getDailyActivity(teamId: string, range: QueryRange) {
   return team;
 }
 
+/** One member's activity series (same buckets/filling as the team series). */
+export async function getMemberDailyActivity(
+  teamId: string,
+  userId: string,
+  range: QueryRange,
+  options?: { granularity?: ActivityGranularity; timeZone?: string }
+): Promise<DailyActivityPoint[]> {
+  const granularity = options?.granularity ?? "day";
+  const timeZone = options?.timeZone ?? DEFAULT_TIMEZONE;
+  const bucketKey =
+    granularity === "hour"
+      ? (d: Date) => hourKeyInTimezone(d, timeZone)
+      : (d: Date) => dayKeyInTimezone(d, timeZone);
+  const rows = await fetchTeamSessions(teamId, range, userId);
+  const map = new Map<string, DayAgg>();
+  let earliest: Date | null = null;
+  for (const r of rows) {
+    const d = toDate(r.started_at);
+    if (!d) continue;
+    if (!earliest || d < earliest) earliest = d;
+    const k = bucketKey(d);
+    const agg = map.get(k) ?? { sessions: 0, inputTokens: 0, outputTokens: 0 };
+    agg.sessions += 1;
+    agg.inputTokens += r.input_tokens;
+    agg.outputTokens += r.output_tokens;
+    map.set(k, agg);
+  }
+  return granularity === "hour" && range.start
+    ? fillHourlySeries(range, map, timeZone)
+    : fillDailySeries(range, earliest, map, timeZone);
+}
+
 /** 7×24 grid (weekday × hour) of session counts for an activity heatmap. */
 export type HeatmapData = { grid: number[][]; max: number };
 
@@ -356,9 +393,20 @@ export async function getHourlyHeatmap(teamId: string, range: QueryRange, timeZo
   return team;
 }
 
+/** One member's weekday × hour heatmap. */
+export async function getMemberHeatmap(
+  teamId: string,
+  userId: string,
+  range: QueryRange,
+  timeZone = DEFAULT_TIMEZONE
+): Promise<HeatmapData> {
+  const rows = await fetchTeamSessions(teamId, range, userId);
+  return buildHeatmapGrid(rows, timeZone);
+}
+
 /** Sessions and tokens grouped by project, busiest first. */
-export async function getProjectBreakdown(teamId: string, range: QueryRange) {
-  const rows = await fetchTeamSessions(teamId, range);
+export async function getProjectBreakdown(teamId: string, range: QueryRange, userId?: string) {
+  const rows = await fetchTeamSessions(teamId, range, userId);
   const map = new Map<string, { sessions: number; tokens: number }>();
   for (const r of rows) {
     const key = r.project_name ?? "Unknown";
@@ -372,8 +420,8 @@ export async function getProjectBreakdown(teamId: string, range: QueryRange) {
     .sort((a, b) => b.sessions - a.sessions);
 }
 
-export async function getModelBreakdown(teamId: string, range: QueryRange) {
-  const rows = await fetchTeamSessions(teamId, range);
+export async function getModelBreakdown(teamId: string, range: QueryRange, userId?: string) {
+  const rows = await fetchTeamSessions(teamId, range, userId);
   const map = new Map<string, { sessionCount: number; tokens: number }>();
   for (const r of rows) {
     const key = r.model ?? "unknown";
@@ -387,8 +435,8 @@ export async function getModelBreakdown(teamId: string, range: QueryRange) {
     .sort((a, b) => b.sessionCount - a.sessionCount);
 }
 
-export async function getToolBreakdown(teamId: string, range: QueryRange) {
-  const rows = await fetchTeamSessions(teamId, range);
+export async function getToolBreakdown(teamId: string, range: QueryRange, userId?: string) {
+  const rows = await fetchTeamSessions(teamId, range, userId);
   const map = new Map<string, number>();
   for (const r of rows) map.set(r.tool, (map.get(r.tool) ?? 0) + 1);
   return [...map.entries()]
@@ -478,9 +526,15 @@ export async function getMemberActivity(teamId: string, range: QueryRange) {
     .sort((a, b) => b.sessionCount - a.sessionCount);
 }
 
-export async function getRecentSessions(teamId: string, range: QueryRange, limit = 50) {
+export async function getRecentSessions(
+  teamId: string,
+  range: QueryRange,
+  limit = 50,
+  userId?: string
+) {
   const admin = getAdmin();
   let q = admin.database.from("sessions").select(SESSION_COLUMNS).eq("team_id", teamId);
+  if (userId) q = q.eq("user_id", userId);
   if (range.start) q = q.gte("started_at", range.start.toISOString());
   if (range.end) q = q.lt("started_at", range.end.toISOString());
   const { data, error } = await q.order("started_at", { ascending: false }).limit(limit);
@@ -585,6 +639,35 @@ export async function getTeamMembers(teamId: string) {
       imageUrl: profile?.avatar_url ?? null,
     };
   });
+}
+
+/** One team member's profile + role, or null when not on the team. */
+export async function getTeamMemberProfile(teamId: string, userId: string) {
+  const admin = getAdmin();
+  const { data: memberData } = await admin.database
+    .from("team_members")
+    .select("user_id, role, joined_at")
+    .eq("team_id", teamId)
+    .eq("user_id", userId)
+    .limit(1);
+  const member = (memberData as { user_id: string; role: string; joined_at: string }[] | null)?.[0];
+  if (!member) return null;
+
+  const { data: profileData } = await admin.database
+    .from("profiles")
+    .select("id, name, email, avatar_url")
+    .eq("id", userId)
+    .limit(1);
+  const profile = (profileData as { id: string; name: string | null; email: string | null; avatar_url: string | null }[] | null)?.[0];
+
+  return {
+    userId,
+    role: member.role,
+    joinedAt: new Date(member.joined_at),
+    name: profile?.name ?? null,
+    email: profile?.email ?? null,
+    imageUrl: profile?.avatar_url ?? null,
+  };
 }
 
 /** CLI tokens owned by this user within a team, newest first. */

@@ -110,6 +110,49 @@ async function countTeamOwners(teamId: string): Promise<number> {
   return count ?? 0;
 }
 
+/** Rename the team. Owners and admins only. */
+export async function renameTeam(teamId: string, name: string): Promise<ActionResult> {
+  const userId = await requireUserId();
+  const role = await requireMembership(userId, teamId);
+  if (role !== "owner" && role !== "admin") {
+    return { ok: false, error: "Only team owners can rename the team." };
+  }
+
+  const trimmed = name.trim();
+  if (trimmed.length < 2) return { ok: false, error: "Team name must be at least 2 characters." };
+  if (trimmed.length > 64) return { ok: false, error: "Team name must be 64 characters or fewer." };
+
+  const admin = getAdmin();
+  const { error } = await admin.database.from("teams").update({ name: trimmed }).eq("id", teamId);
+  if (error) return { ok: false, error: "Could not rename the team. Try again." };
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/settings");
+  return { ok: true };
+}
+
+/** Rotate the invite code so previously shared codes stop working. Owners and admins only. */
+export async function regenerateInviteCode(
+  teamId: string
+): Promise<ActionResult<{ inviteCode: string }>> {
+  const userId = await requireUserId();
+  const role = await requireMembership(userId, teamId);
+  if (role !== "owner" && role !== "admin") {
+    return { ok: false, error: "Only team owners can regenerate the invite code." };
+  }
+
+  const admin = getAdmin();
+  const inviteCode = newInviteCode();
+  const { error } = await admin.database
+    .from("teams")
+    .update({ invite_code: inviteCode })
+    .eq("id", teamId);
+  if (error) return { ok: false, error: "Could not regenerate the invite code. Try again." };
+
+  revalidatePath("/dashboard/settings");
+  return { ok: true, data: { inviteCode } };
+}
+
 /** Remove a member from the team. Sessions and profile data are kept. */
 export async function removeTeamMember(
   teamId: string,

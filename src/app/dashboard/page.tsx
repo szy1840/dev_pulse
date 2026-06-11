@@ -10,7 +10,7 @@ import {
   getMemberActivity,
   getSessionsForSummary,
 } from "@/lib/queries";
-import { resolveRange, type PeriodRange } from "@/lib/period";
+import { resolveRange, previousQueryRange, previousPeriodWord, type PeriodRange } from "@/lib/period";
 import { getTeamPeriodSummary, getUserPeriodSummary } from "@/lib/daily-summary";
 import { getCommitCosts } from "@/lib/attribution";
 import { formatTimezoneLabel } from "@/lib/timezone";
@@ -55,9 +55,11 @@ export default async function OverviewPage({
   const range = resolveRange(params.view ?? params.period, params.anchor, timeZone);
   const activityGranularity = range.view === "day" ? "hour" : "day";
 
-  const [stats, dailyActivity, models, tools, projects, heatmap, periodSessions, members, commitCosts] =
+  const prevRange = previousQueryRange(range, timeZone);
+  const [stats, prevStats, dailyActivity, models, tools, projects, heatmap, periodSessions, members, commitCosts] =
     await Promise.all([
       getTeamStats(team.id, range),
+      prevRange ? getTeamStats(team.id, prevRange) : Promise.resolve(null),
       getDailyActivityWithMembers(team.id, range, { granularity: activityGranularity, timeZone }),
       getModelBreakdown(team.id, range),
       getToolBreakdown(team.id, range),
@@ -104,6 +106,9 @@ export default async function OverviewPage({
   );
 
   const totalTokens = stats.inputTokens + stats.outputTokens;
+  const deltaWord = previousPeriodWord(range.view);
+  const deltaFor = (current: number, previous: number | undefined) =>
+    prevStats && previous !== undefined ? { current, previous, word: deltaWord } : undefined;
   const daily = dailyActivity.team;
   const memberDaily = dailyActivity.members;
   const sessionSpark = daily.map((d) => ({ value: d.sessions }));
@@ -156,6 +161,7 @@ export default async function OverviewPage({
           icon={<Activity className="h-5 w-5" />}
           accent={3}
           chart={<Sparkline data={sessionSpark} accent={3} />}
+          delta={deltaFor(stats.sessionCount, prevStats?.sessionCount)}
         />
         <StatCard
           label="Total tokens"
@@ -164,6 +170,10 @@ export default async function OverviewPage({
           icon={<Layers className="h-5 w-5" />}
           accent={0}
           chart={<Sparkline data={tokenSpark} accent={0} />}
+          delta={deltaFor(
+            totalTokens,
+            prevStats ? prevStats.inputTokens + prevStats.outputTokens : undefined
+          )}
         />
         <StatCard
           label="Active members"
@@ -171,6 +181,7 @@ export default async function OverviewPage({
           hint="synced in this period"
           icon={<Users className="h-5 w-5" />}
           accent={2}
+          delta={deltaFor(stats.activeMembers, prevStats?.activeMembers)}
         />
         <StatCard
           label="Active time"
@@ -178,6 +189,7 @@ export default async function OverviewPage({
           hint={formatActivityHint(stats.peakConcurrency, stats.parallelFactor)}
           icon={<Clock className="h-5 w-5" />}
           accent={4}
+          delta={deltaFor(stats.activeMs, prevStats?.activeMs)}
         />
       </div>
 
