@@ -1,6 +1,6 @@
 {
   "name": "devpulse-ai",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "DevPulse AI CLI — sync local AI coding tool sessions to your team dashboard.",
   "type": "module",
   "bin": {
@@ -11,7 +11,7 @@
     "url": "https://github.com/szy1840/dev_pulse.git",
     "directory": "cli"
   },
-  "homepage": "https://7aj5nkyd.insforge.site",
+  "homepage": "https://www.trydevpulse.com",
   "bugs": {
     "url": "https://github.com/szy1840/dev_pulse/issues"
   },
