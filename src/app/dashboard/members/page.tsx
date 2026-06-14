@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
-import { Users, Coins, ChevronRight } from "lucide-react";
+import { Coins, Clock, ChevronRight } from "lucide-react";
 import { requireUserId, getActiveTeam, getViewerTimezone } from "@/lib/auth";
 import { getMemberActivity, getSessionsForSummary } from "@/lib/queries";
 import { getUserPeriodSummaries } from "@/lib/daily-summary";
 import { resolveRange, type PeriodRange } from "@/lib/period";
+import { cn } from "@/lib/utils";
 import { MemberTodayPanel } from "@/components/member-today-panel";
 import { formatCompact, formatNumber, formatDuration, formatActivityHint } from "@/lib/format";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,8 +22,9 @@ import { Badge } from "@/components/ui/badge";
 import { ToolBadge } from "@/components/tool-badge";
 import { PeriodSelector } from "@/components/period-selector";
 import { ChartCard } from "@/components/charts/chart-card";
-import { BarListChart } from "@/components/charts/bar-list-chart";
 import { DonutChart } from "@/components/charts/donut-chart";
+import { BarListChart } from "@/components/charts/bar-list-chart";
+import { MemberLeaderboard, rankMedal } from "@/components/member-leaderboard";
 import { MembersViewToggle } from "@/components/members-view-toggle";
 
 type MemberRow = Awaited<ReturnType<typeof getMemberActivity>>[number];
@@ -77,12 +79,11 @@ export default async function MembersPage({
   );
 
   const active = members.filter((m) => m.sessionCount > 0);
-  const sessionRanking = active.map((m) => ({
-    name: m.name ?? "Member",
-    value: m.sessionCount,
-    sub: m.tokens,
-  }));
   const tokenShare = active.map((m) => ({ name: m.name ?? "Member", value: m.tokens }));
+  const activeTimeRanking = active
+    .filter((m) => m.activeMs > 0)
+    .sort((a, b) => b.activeMs - a.activeMs)
+    .map((m) => ({ name: m.name ?? "Member", value: m.activeMs }));
 
   return (
     <div className="space-y-6">
@@ -104,30 +105,38 @@ export default async function MembersPage({
       </div>
 
       {active.length > 0 && (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <ChartCard
-            title="Sessions by member"
-            description="Who ran the most AI sessions"
-            icon={<Users className="h-4 w-4" />}
-          >
-            <BarListChart
-              data={sessionRanking}
-              valueLabel="Sessions"
-              subLabel="Tokens"
-              height={Math.max(160, sessionRanking.length * 36)}
-            />
-          </ChartCard>
-          <ChartCard
-            title="Token share"
-            description="Token consumption across the team"
-            icon={<Coins className="h-4 w-4" />}
-          >
-            <DonutChart
-              data={tokenShare}
-              centerLabel="tokens"
-              centerValue={formatCompact(tokenShare.reduce((a, m) => a + m.value, 0))}
-            />
-          </ChartCard>
+        <div className="space-y-4">
+          <MemberLeaderboard
+            members={active}
+            viewerId={userId}
+            periodWord={range.shortLabel}
+            hrefFor={(id) => memberHref(id, range)}
+          />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <ChartCard
+              title="Token share"
+              description="Token consumption across the team"
+              icon={<Coins className="h-4 w-4" />}
+            >
+              <DonutChart
+                data={tokenShare}
+                centerLabel="tokens"
+                centerValue={formatCompact(tokenShare.reduce((a, m) => a + m.value, 0))}
+              />
+            </ChartCard>
+            <ChartCard
+              title="Active time by member"
+              description="Who spent the most time in AI sessions"
+              icon={<Clock className="h-4 w-4" />}
+            >
+              <BarListChart
+                data={activeTimeRanking}
+                valueLabel="Active time"
+                format="duration"
+                height={Math.max(160, activeTimeRanking.length * 36)}
+              />
+            </ChartCard>
+          </div>
         </div>
       )}
 
@@ -152,13 +161,24 @@ function MemberCards({
 }) {
   return (
     <div className="grid gap-4">
-      {members.map((m) => (
-        <Card key={m.userId} className="transition-shadow hover:shadow-md">
+      {members.map((m, i) => (
+        <Card
+          key={m.userId}
+          className={cn(
+            "transition-shadow hover:shadow-md",
+            i === 0 && m.sessionCount > 0 && "ring-1 ring-inset ring-primary/15"
+          )}
+        >
           <CardHeader className="pb-3">
             <div className="flex items-center gap-3">
               <Avatar name={m.name} imageUrl={m.imageUrl} className="h-10 w-10" />
               <div className="min-w-0">
                 <CardTitle className="flex items-center gap-2 text-base">
+                  {m.sessionCount > 0 && i < 3 && (
+                    <span aria-hidden className="text-lg leading-none">
+                      {rankMedal(i)}
+                    </span>
+                  )}
                   <Link
                     href={memberHref(m.userId, range)}
                     className="truncate underline-offset-4 hover:underline"
@@ -240,6 +260,7 @@ function MemberTable({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12 text-center">#</TableHead>
               <TableHead>Member</TableHead>
               <TableHead className="text-right">Sessions</TableHead>
               <TableHead className="text-right">Tokens</TableHead>
@@ -250,8 +271,17 @@ function MemberTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {members.map((m) => (
+            {members.map((m, i) => (
               <TableRow key={m.userId}>
+                <TableCell className="text-center tabular-nums">
+                  {m.sessionCount > 0 ? (
+                    <span className={cn(i < 3 ? "text-base" : "text-sm text-muted-foreground")}>
+                      {rankMedal(i)}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </TableCell>
                 <TableCell>
                   <Link href={memberHref(m.userId, range)} className="flex items-center gap-2.5">
                     <Avatar name={m.name} imageUrl={m.imageUrl} className="h-7 w-7" />
