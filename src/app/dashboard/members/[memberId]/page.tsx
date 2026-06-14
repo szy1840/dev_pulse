@@ -12,6 +12,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { requireUserId, getActiveTeam, getViewerTimezone } from "@/lib/auth";
+import { Suspense } from "react";
 import {
   getTeamMemberProfile,
   getTeamStats,
@@ -21,10 +22,10 @@ import {
   getProjectBreakdown,
   getMemberHeatmap,
   getRecentSessions,
-  getSessionsForSummary,
 } from "@/lib/queries";
 import { resolveRange, previousQueryRange, previousPeriodWord } from "@/lib/period";
-import { getUserPeriodSummaries } from "@/lib/daily-summary";
+import { MemberSummarySection } from "@/components/member-summary-section";
+import { SummaryCardSkeleton } from "@/components/dashboard-skeletons";
 import {
   formatCompact,
   formatNumber,
@@ -35,7 +36,6 @@ import {
 } from "@/lib/format";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { ToolBadge } from "@/components/tool-badge";
 import { PeriodSelector } from "@/components/period-selector";
 import { StatCard } from "@/components/stat-card";
@@ -46,7 +46,6 @@ import { RadialChart } from "@/components/charts/radial-chart";
 import { BarListChart } from "@/components/charts/bar-list-chart";
 import { ActivityHeatmap } from "@/components/charts/activity-heatmap";
 import { Sparkline } from "@/components/charts/sparkline";
-import { MemberTodayPanel } from "@/components/member-today-panel";
 import { SessionsExplorer } from "@/components/sessions-explorer";
 
 export default async function MemberDetailPage({
@@ -70,7 +69,7 @@ export default async function MemberDetailPage({
   const granularity = range.view === "day" ? "hour" : "day";
   const prevRange = previousQueryRange(range, timeZone);
 
-  const [stats, prevStats, daily, models, tools, projects, heatmap, sessions, summarySessions] =
+  const [stats, prevStats, daily, models, tools, projects, heatmap, sessions] =
     await Promise.all([
       getTeamStats(team.id, range, memberId),
       prevRange ? getTeamStats(team.id, prevRange, memberId) : Promise.resolve(null),
@@ -80,18 +79,9 @@ export default async function MemberDetailPage({
       getProjectBreakdown(team.id, range, memberId),
       getMemberHeatmap(team.id, memberId, range, timeZone),
       getRecentSessions(team.id, range, 500, memberId),
-      getSessionsForSummary(team.id, range, memberId),
     ]);
 
   const memberName = member.name ?? "Member";
-  const summaries = await getUserPeriodSummaries(
-    team.id,
-    memberId,
-    memberName,
-    range,
-    timeZone,
-    summarySessions
-  );
 
   const totalTokens = stats.inputTokens + stats.outputTokens;
   const deltaWord = previousPeriodWord(range.view);
@@ -144,22 +134,15 @@ export default async function MemberDetailPage({
       </div>
 
       {/* AI period summary */}
-      <Card className="relative overflow-hidden">
-        <span
-          className="absolute inset-x-0 top-0 h-1"
-          style={{
-            background:
-              "linear-gradient(90deg, hsl(var(--chart-2)), hsl(var(--chart-3)), hsl(var(--chart-4)))",
-          }}
+      <Suspense key={`${range.view}:${range.anchor}`} fallback={<SummaryCardSkeleton />}>
+        <MemberSummarySection
+          teamId={team.id}
+          memberId={memberId}
+          memberName={memberName}
+          range={range}
+          timeZone={timeZone}
         />
-        <CardContent className="pt-5">
-          <MemberTodayPanel
-            overall={summaries.overall}
-            byTool={summaries.byTool}
-            periodWord={range.shortLabel}
-          />
-        </CardContent>
-      </Card>
+      </Suspense>
 
       {/* Headline stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Activity, Clock, Cpu, Layers, Users, Wrench, FolderGit2 } from "lucide-react";
 import { requireUserId, getActiveTeam, getViewerTimezone } from "@/lib/auth";
 import {
@@ -7,11 +8,8 @@ import {
   getProjectBreakdown,
   getDailyActivityWithMembers,
   getHourlyHeatmapWithMembers,
-  getMemberActivity,
-  getSessionsForSummary,
 } from "@/lib/queries";
 import { resolveRange, previousQueryRange, previousPeriodWord, type PeriodRange } from "@/lib/period";
-import { getTeamPeriodSummary, getUserPeriodSummary } from "@/lib/daily-summary";
 import { getCommitCosts } from "@/lib/attribution";
 import { formatTimezoneLabel } from "@/lib/timezone";
 import { formatCompact, formatNumber, formatDuration, formatActivityHint, prettyModel, prettyTool } from "@/lib/format";
@@ -25,7 +23,8 @@ import { BarListChart } from "@/components/charts/bar-list-chart";
 import { ActivityHeatmapPanel } from "@/components/charts/activity-heatmap-panel";
 import { TokenCompositionBar } from "@/components/charts/token-composition-bar";
 import { Sparkline } from "@/components/charts/sparkline";
-import { TeamTodaySummary } from "@/components/team-today-summary";
+import { TeamSummarySection } from "@/components/team-summary-section";
+import { SummaryCardSkeleton } from "@/components/dashboard-skeletons";
 import { CommitCosts } from "@/components/commit-costs";
 
 function summaryHeading(range: PeriodRange): string {
@@ -56,7 +55,7 @@ export default async function OverviewPage({
   const activityGranularity = range.view === "day" ? "hour" : "day";
 
   const prevRange = previousQueryRange(range, timeZone);
-  const [stats, prevStats, dailyActivity, models, tools, projects, heatmap, periodSessions, members, commitCosts] =
+  const [stats, prevStats, dailyActivity, models, tools, projects, heatmap, commitCosts] =
     await Promise.all([
       getTeamStats(team.id, range),
       prevRange ? getTeamStats(team.id, prevRange) : Promise.resolve(null),
@@ -65,45 +64,8 @@ export default async function OverviewPage({
       getToolBreakdown(team.id, range),
       getProjectBreakdown(team.id, range),
       getHourlyHeatmapWithMembers(team.id, range, timeZone),
-      getSessionsForSummary(team.id, range),
-      getMemberActivity(team.id, range),
       getCommitCosts(team.id, range),
     ]);
-
-  const byUser = new Map<string, typeof periodSessions>();
-  for (const s of periodSessions) {
-    const list = byUser.get(s.userId) ?? [];
-    list.push(s);
-    byUser.set(s.userId, list);
-  }
-
-  const teamSummary = await getTeamPeriodSummary(
-    team.id,
-    team.name,
-    range,
-    timeZone,
-    periodSessions,
-    stats.activeMembers
-  );
-
-  const memberSummaries = await Promise.all(
-    members
-      .filter((m) => m.sessionCount > 0)
-      .map(async (m) => ({
-        userId: m.userId,
-        name: m.name ?? "Member",
-        imageUrl: m.imageUrl,
-        sessionCount: m.sessionCount,
-        overall: await getUserPeriodSummary(
-          team.id,
-          m.userId,
-          m.name ?? "Member",
-          range,
-          timeZone,
-          byUser.get(m.userId) ?? []
-        ),
-      }))
-  );
 
   const totalTokens = stats.inputTokens + stats.outputTokens;
   const deltaWord = previousPeriodWord(range.view);
@@ -141,16 +103,19 @@ export default async function OverviewPage({
         />
       </div>
 
-      <TeamTodaySummary
-        teamName={team.name}
-        summary={teamSummary}
-        heading={summaryHeading(range)}
-        periodLabel={range.label}
-        timezoneLabel={range.view === "all" ? undefined : formatTimezoneLabel(timeZone)}
-        sessionCount={stats.sessionCount}
-        activeMembers={stats.activeMembers}
-        members={memberSummaries}
-      />
+      <Suspense key={`${range.view}:${range.anchor}`} fallback={<SummaryCardSkeleton />}>
+        <TeamSummarySection
+          teamId={team.id}
+          teamName={team.name}
+          range={range}
+          timeZone={timeZone}
+          heading={summaryHeading(range)}
+          periodLabel={range.label}
+          timezoneLabel={range.view === "all" ? undefined : formatTimezoneLabel(timeZone)}
+          sessionCount={stats.sessionCount}
+          activeMembers={stats.activeMembers}
+        />
+      </Suspense>
 
       {/* Headline stats with sparklines */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

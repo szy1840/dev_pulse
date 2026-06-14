@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -32,6 +33,12 @@ export function PeriodSelector({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
+  // Optimistic granularity: highlight the clicked tab instantly instead of
+  // waiting for the server round-trip to update the `view` prop.
+  const [pendingView, setPendingView] = useState<string | null>(null);
+
+  const activeView = isPending && pendingView ? pendingView : view;
 
   function navigate(nextView: string, anchor?: string | null) {
     const params = new URLSearchParams(searchParams.toString());
@@ -39,12 +46,23 @@ export function PeriodSelector({
     params.set("view", nextView);
     if (anchor) params.set("anchor", anchor);
     else params.delete("anchor"); // current period
-    router.push(`${pathname}?${params.toString()}`);
+    setPendingView(nextView);
+    // Wrapping the push in a transition keeps the current page mounted (no
+    // full-screen loading.tsx flash) and exposes isPending for inline feedback.
+    startTransition(() => {
+      router.push(`${pathname}?${params.toString()}`);
+    });
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {view !== "all" && (
+    <div
+      className={cn(
+        "flex flex-wrap items-center gap-2 transition-opacity",
+        isPending && "opacity-60"
+      )}
+      aria-busy={isPending}
+    >
+      {activeView !== "all" && (
         <div className="inline-flex items-center gap-1 rounded-lg border px-1 py-0.5">
           <button
             onClick={() => prevAnchor && navigate(view, prevAnchor)}
@@ -82,7 +100,7 @@ export function PeriodSelector({
             onClick={() => navigate(opt.value)}
             className={cn(
               "rounded-md px-3 py-1 text-sm font-medium transition-colors",
-              view === opt.value
+              activeView === opt.value
                 ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:text-foreground"
             )}

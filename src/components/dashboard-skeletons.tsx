@@ -48,6 +48,36 @@ export function ChartCardSkeleton({ height = 260 }: { height?: number }) {
   );
 }
 
+/** Matches the AI summary card (TeamTodaySummary / MemberTodayPanel) while the LLM streams. */
+export function SummaryCardSkeleton() {
+  return (
+    <Card className="relative overflow-hidden">
+      <span
+        className="absolute inset-x-0 top-0 h-1"
+        style={{
+          background:
+            "linear-gradient(90deg, hsl(var(--chart-2)), hsl(var(--chart-3)), hsl(var(--chart-4)))",
+        }}
+      />
+      <CardContent className="p-5 sm:p-6">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+          <Skeleton className="h-11 w-11 shrink-0 rounded-xl" />
+          <div className="min-w-0 flex-1 space-y-3">
+            <div className="space-y-1.5">
+              <Skeleton className="h-5 w-48" />
+              <Skeleton className="h-3 w-64" />
+            </div>
+            <div className="space-y-2 pt-1">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-[85%]" />
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function TableSkeleton({ rows = 8 }: { rows?: number }) {
   return (
     <Card>
