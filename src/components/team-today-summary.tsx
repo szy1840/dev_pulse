@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Sparkles, Users, Activity } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +26,7 @@ export function TeamTodaySummary({
   activeMembers: number;
   members?: TeamMemberToday[];
 }) {
+  const t = useTranslations("dashboard");
   const isEmpty = sessionCount === 0;
 
   return (
@@ -63,11 +65,11 @@ export function TeamTodaySummary({
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="secondary" className="gap-1 font-normal tabular-nums">
                     <Activity className="h-3 w-3 opacity-70" />
-                    {sessionCount} session{sessionCount === 1 ? "" : "s"}
+                    {t("summaryBadges.sessions", { count: sessionCount })}
                   </Badge>
                   <Badge variant="secondary" className="gap-1 font-normal tabular-nums">
                     <Users className="h-3 w-3 opacity-70" />
-                    {activeMembers} active
+                    {t("summaryBadges.active", { count: activeMembers })}
                   </Badge>
                 </div>
               )}

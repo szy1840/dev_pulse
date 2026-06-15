@@ -1,14 +1,16 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { formatCompact, formatNumber } from "@/lib/format";
 
 export type TokenSegment = { label: string; value: number; color: string };
 
 /** A single stacked horizontal bar breaking down token usage by category. */
 export function TokenCompositionBar({ segments }: { segments: TokenSegment[] }) {
+  const t = useTranslations("charts");
   const total = segments.reduce((a, s) => a + s.value, 0);
   if (total === 0) {
-    return <p className="py-10 text-center text-sm text-muted-foreground">No tokens yet.</p>;
+    return <p className="py-10 text-center text-sm text-muted-foreground">{t("empty.noTokens")}</p>;
   }
 
   return (

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
@@ -33,7 +34,7 @@ type LeaderMember = {
  * Presentational server component — the parent passes already-sorted member rows
  * and an href builder so each row links through to the member's profile.
  */
-export function MemberLeaderboard({
+export async function MemberLeaderboard({
   members,
   viewerId,
   periodWord,
@@ -47,6 +48,7 @@ export function MemberLeaderboard({
   hrefFor: (memberId: string) => string;
   className?: string;
 }) {
+  const t = await getTranslations("members");
   const ranked = members.filter((m) => m.sessionCount > 0);
   if (ranked.length === 0) return null;
   const topSessions = ranked[0].sessionCount || 1;
@@ -69,9 +71,9 @@ export function MemberLeaderboard({
             🏆
           </span>
           <div className="space-y-0.5">
-            <h2 className="text-base font-semibold tracking-tight">Leaderboard</h2>
+            <h2 className="text-base font-semibold tracking-tight">{t("leaderboard.title")}</h2>
             <p className="text-xs text-muted-foreground">
-              Top contributors by sessions · {periodWord}
+              {t("leaderboard.subtitle", { period: periodWord })}
             </p>
           </div>
         </div>
@@ -80,10 +82,10 @@ export function MemberLeaderboard({
         <div className="hidden items-center gap-3 px-2 pb-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground sm:flex">
           <span className="w-7 shrink-0" />
           <span className="w-9 shrink-0" />
-          <span className="flex-1">Member</span>
-          <span className="w-16 shrink-0 text-right">Sessions</span>
-          <span className="w-20 shrink-0 text-right">Tokens</span>
-          <span className="hidden w-20 shrink-0 text-right md:block">Active</span>
+          <span className="flex-1">{t("leaderboard.member")}</span>
+          <span className="w-16 shrink-0 text-right">{t("leaderboard.sessions")}</span>
+          <span className="w-20 shrink-0 text-right">{t("leaderboard.tokens")}</span>
+          <span className="hidden w-20 shrink-0 text-right md:block">{t("leaderboard.active")}</span>
         </div>
 
         <ol className="space-y-0.5">
@@ -113,16 +115,16 @@ export function MemberLeaderboard({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="truncate text-sm font-medium underline-offset-4 group-hover:underline">
-                        {m.name ?? "Member"}
+                        {m.name ?? t("memberFallback")}
                       </span>
                       {m.role === "owner" && (
                         <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
-                          Owner
+                          {t("owner")}
                         </Badge>
                       )}
                       {isYou && (
                         <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
-                          You
+                          {t("you")}
                         </Badge>
                       )}
                     </div>
@@ -137,7 +139,7 @@ export function MemberLeaderboard({
                   <div className="w-16 shrink-0 text-right text-sm font-semibold tabular-nums">
                     {formatNumber(m.sessionCount)}
                     <span className="ml-1 text-[11px] font-normal text-muted-foreground sm:hidden">
-                      sess
+                      {t("leaderboard.sessSuffix")}
                     </span>
                   </div>
                   <div className="hidden w-20 shrink-0 text-right text-sm tabular-nums text-muted-foreground sm:block">

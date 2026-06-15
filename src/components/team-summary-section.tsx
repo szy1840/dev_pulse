@@ -1,6 +1,8 @@
+import { getLocale } from "next-intl/server";
 import { getSessionsForSummary, getMemberActivity } from "@/lib/queries";
 import { getTeamPeriodSummary, getUserPeriodSummary } from "@/lib/daily-summary";
 import { TeamTodaySummary } from "@/components/team-today-summary";
+import { type Locale } from "@/lib/locale";
 import type { PeriodRange } from "@/lib/period";
 
 /**
@@ -30,6 +32,7 @@ export async function TeamSummarySection({
   sessionCount: number;
   activeMembers: number;
 }) {
+  const locale = (await getLocale()) as Locale;
   const [periodSessions, members] = await Promise.all([
     getSessionsForSummary(teamId, range),
     getMemberActivity(teamId, range),
@@ -48,7 +51,8 @@ export async function TeamSummarySection({
     range,
     timeZone,
     periodSessions,
-    activeMembers
+    activeMembers,
+    locale
   );
 
   const memberSummaries = await Promise.all(
@@ -65,7 +69,8 @@ export async function TeamSummarySection({
           m.name ?? "Member",
           range,
           timeZone,
-          byUser.get(m.userId) ?? []
+          byUser.get(m.userId) ?? [],
+          locale
         ),
       }))
   );

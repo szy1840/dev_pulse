@@ -1,0 +1,36 @@
+{
+  "nav": {
+    "overview": "Overview",
+    "sessions": "Sessions",
+    "members": "Members",
+    "settings": "Settings"
+  },
+  "userMenu": {
+    "member": "Member",
+    "signOut": "Sign out",
+    "signingOut": "Signing out…"
+  },
+  "teamSwitcher": {
+    "selectTeam": "Select team",
+    "createOrJoin": "Create or join team"
+  },
+  "language": {
+    "label": "Language",
+    "description": "Language for the dashboard interface.",
+    "section": "Language",
+    "sectionDescription": "Choose the language for the dashboard interface."
+  },
+  "period": {
+    "day": "Day",
+    "week": "Week",
+    "month": "Month",
+    "all": "All time",
+    "previous": "Previous period",
+    "next": "Next period",
+    "jumpToCurrent": "Jump to current"
+  },
+  "membersView": {
+    "detail": "Detail",
+    "compact": "Compact"
+  }
+}

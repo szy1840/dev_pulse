@@ -1,0 +1,25 @@
+{
+  "onboarding": {
+    "page": {
+      "backToDashboard": "Back to dashboard"
+    },
+    "form": {
+      "title": "Set up your team",
+      "subtitle": "Create a new team or join one with an invite code.",
+      "createTab": "Create team",
+      "joinTab": "Join team",
+      "teamNameLabel": "Team name",
+      "teamNamePlaceholder": "Acme Engineering",
+      "createTeam": "Create team",
+      "creating": "Creating…",
+      "inviteCodeLabel": "Invite code",
+      "joinTeam": "Join team",
+      "joining": "Joining…"
+    },
+    "cli": {
+      "title": "Connect the CLI",
+      "description": "Team <strong>{teamName}</strong> is ready. Run these commands on your machine to start syncing AI usage data.",
+      "skipForNow": "Skip for now"
+    }
+  }
+}

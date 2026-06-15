@@ -1,0 +1,113 @@
+{
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Workspace and personal settings for <strong>{team}</strong>.",
+    "nav": {
+      "workspace": "Workspace",
+      "personal": "Personal",
+      "general": "General",
+      "members": "Members",
+      "invites": "Invites",
+      "cli": "CLI setup",
+      "devices": "Devices",
+      "timezone": "Timezone",
+      "language": "Language",
+      "ariaLabel": "Settings sections"
+    },
+    "sections": {
+      "generalTitle": "General",
+      "generalDescription": "The team's name across the dashboard.",
+      "membersTitle": "Team members",
+      "membersDescription": "{count, plural, =1 {# member} other {# members}} in this team. Removing someone only revokes their access — synced sessions stay in team history.",
+      "invitesTitle": "Invite teammates",
+      "invitesDescription": "Anyone with this code can join the team.",
+      "cliTitle": "Connect the CLI",
+      "devicesTitle": "Connected devices",
+      "devicesDescriptionEmpty": "Devices appear here after you run devpulse login on a machine.",
+      "devicesDescriptionActive": "{count, plural, =1 {# active device} other {# active devices}} can sync sessions for this team.",
+      "devicesDescriptionSuffix": "Revoke access if a laptop is lost or replaced.",
+      "timezoneTitle": "Timezone",
+      "timezoneDescription": "Currently using {tz} ({label}) for daily summaries and \"Today\" filters."
+    },
+    "cliSectionDescription": "Run these commands on each developer machine. <code>devpulse login</code> opens your browser to authorize — no manual tokens needed.",
+    "general": {
+      "teamName": "Team name",
+      "renameRestricted": "Only team owners can rename the team.",
+      "saved": "Saved",
+      "saving": "Saving…",
+      "save": "Save",
+      "helper": "Shown in the team switcher and on every dashboard page."
+    },
+    "members": {
+      "memberFallback": "Member",
+      "thisMemberFallback": "this member",
+      "owner": "Owner",
+      "admin": "Admin",
+      "you": "You",
+      "noEmail": "No email",
+      "joined": "joined {date}",
+      "remove": "Remove",
+      "removeConfirm": "Remove {name} from the team? Their synced sessions stay in team history, but they lose access and CLI sync for this team.",
+      "removeConfirmLabel": "Remove member",
+      "leaveConfirmThis": "Leave this team? Your past sessions remain in team history. You can rejoin with the invite code.",
+      "leaveConfirmThe": "Leave the team? Your past sessions remain in team history. You can rejoin with the invite code.",
+      "leaveConfirmLabel": "Leave team",
+      "leaveDescription": "Stop syncing to this team and remove yourself from the roster.",
+      "leave": "Leave team",
+      "onlyOwnerNote": "As the only owner, you cannot leave until another owner is added.",
+      "cancel": "Cancel"
+    },
+    "invites": {
+      "share": "Share this code so teammates can join <strong>{team}</strong> from the onboarding screen.",
+      "copied": "Copied",
+      "copy": "Copy",
+      "regenerate": "Regenerate",
+      "regenerateConfirm": "Generate a new invite code? The current code stops working immediately — anyone you already shared it with will need the new one. Existing members are unaffected.",
+      "regenerating": "Regenerating…",
+      "regenerateConfirmLabel": "Regenerate code",
+      "cancel": "Cancel"
+    },
+    "devices": {
+      "emptyTitle": "No devices connected yet",
+      "emptyBody": "Run <code>devpulse login</code> on your machine — your browser will open to authorize this computer.",
+      "noActive": "No active devices.",
+      "revoked": "Revoked",
+      "connected": "Connected {date}",
+      "lastSync": " · last sync {date}",
+      "neverSynced": " · never synced",
+      "revokeAria": "Revoke {name}"
+    },
+    "cli": {
+      "openclawPrompt": "Set up DevPulse CLI on this machine (Node.js 22+):\n\nnpm install -g devpulse-ai\ndevpulse login\ndevpulse sync\n\nRun in order. devpulse login opens a browser to authorize — complete it (ask me if needed). Then run devpulse status and report the result.",
+      "step1Title": "Install the CLI",
+      "step1Body": "Requires Node.js 22+. Run once per machine.",
+      "step2Title": "Log in on this machine",
+      "step2Body": "Opens your browser to authorize the CLI — similar to Claude Code device login.",
+      "step3Title": "Sync your usage data",
+      "step3Body": "Scans local AI tool logs and uploads usage metadata — tokens, activity, summaries, and more. Run again anytime.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "compactNote": "Check configuration anytime with <code>devpulse status</code>. Only usage metadata is uploaded — never code or transcripts.",
+      "connectTitle": "Connect your machine to see data here",
+      "connectBody": "The dashboard fills in after you install the CLI and run <code>devpulse sync</code> on your laptop. Only lightweight usage metadata is uploaded — never code or transcripts.",
+      "openclawTitle": "Copy this prompt and let OpenClaw handle setup",
+      "openclawBody": "Works with OpenClaw, which can complete the browser login for you. Sandboxed agents (e.g. cloud-based ones) can't — use the manual steps instead.",
+      "manualTitle": "Manual setup",
+      "afterSync": "After syncing, refresh the dashboard to see your data.",
+      "openDashboard": "Open dashboard"
+    },
+    "timezone": {
+      "label": "Timezone",
+      "common": "Common",
+      "all": "All",
+      "helper": "Dashboard \"Today\" summaries and stats use midnight in this timezone.",
+      "useBrowser": "Use browser timezone ({tz})"
+    },
+    "banner": {
+      "title": "No usage data yet — connect the CLI on your machine",
+      "body": "Install with <install></install>, then run <login></login> and <sync></sync>.",
+      "setupGuide": "Setup guide",
+      "dismiss": "Dismiss"
+    }
+  }
+}

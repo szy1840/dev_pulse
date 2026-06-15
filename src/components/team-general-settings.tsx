@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ export function TeamGeneralSettings({
   teamName: string;
   canManage: boolean;
 }) {
+  const t = useTranslations("settings");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [name, setName] = useState(teamName);
@@ -42,9 +44,9 @@ export function TeamGeneralSettings({
   if (!canManage) {
     return (
       <div className="space-y-1">
-        <Label>Team name</Label>
+        <Label>{t("general.teamName")}</Label>
         <p className="text-sm">{teamName}</p>
-        <p className="text-xs text-muted-foreground">Only team owners can rename the team.</p>
+        <p className="text-xs text-muted-foreground">{t("general.renameRestricted")}</p>
       </div>
     );
   }
@@ -57,7 +59,7 @@ export function TeamGeneralSettings({
         if (dirty && !pending) save();
       }}
     >
-      <Label htmlFor="team-name">Team name</Label>
+      <Label htmlFor="team-name">{t("general.teamName")}</Label>
       <div className="flex max-w-md gap-2">
         <Input
           id="team-name"
@@ -68,12 +70,10 @@ export function TeamGeneralSettings({
         />
         <Button type="submit" disabled={!dirty || pending} className="shrink-0">
           {saved ? <Check className="h-4 w-4" /> : null}
-          {saved ? "Saved" : pending ? "Saving…" : "Save"}
+          {saved ? t("general.saved") : pending ? t("general.saving") : t("general.save")}
         </Button>
       </div>
-      <p className="text-xs text-muted-foreground">
-        Shown in the team switcher and on every dashboard page.
-      </p>
+      <p className="text-xs text-muted-foreground">{t("general.helper")}</p>
       {error && <p className="text-sm text-destructive">{error}</p>}
     </form>
   );

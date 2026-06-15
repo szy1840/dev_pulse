@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { ActivityHeatmap } from "@/components/charts/activity-heatmap";
 import type { HeatmapData, MemberHeatmap } from "@/lib/queries";
 import { cn } from "@/lib/utils";
@@ -14,12 +15,13 @@ export function ActivityHeatmapPanel({
   team: HeatmapData;
   members: MemberHeatmap[];
 }) {
+  const t = useTranslations("charts");
   const [selected, setSelected] = useState(TEAM);
   const showSelector = members.length > 0;
 
   const options = useMemo(
-    () => [{ id: TEAM, name: "All team" }, ...members.map((m) => ({ id: m.memberId, name: m.name }))],
-    [members]
+    () => [{ id: TEAM, name: t("heatmap.allTeam") }, ...members.map((m) => ({ id: m.memberId, name: m.name }))],
+    [members, t]
   );
 
   const active = useMemo(() => {

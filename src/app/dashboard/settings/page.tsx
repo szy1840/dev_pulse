@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
+import { getTranslations } from "next-intl/server";
 import {
   Building2,
   Clock,
+  Globe,
   Laptop,
   TerminalSquare,
   UserPlus,
@@ -16,27 +18,9 @@ import { TeamMembersSettings } from "@/components/team-members-settings";
 import { TeamGeneralSettings } from "@/components/team-general-settings";
 import { CliSetupGuide } from "@/components/cli-setup-guide";
 import { TimezoneSettings } from "@/components/timezone-settings";
+import { LanguageSettings } from "@/components/language-settings";
 import { SettingsNav } from "@/components/settings-nav";
 import { formatTimezoneLabel } from "@/lib/timezone";
-
-const NAV_GROUPS = [
-  {
-    label: "Workspace",
-    sections: [
-      { id: "general", label: "General" },
-      { id: "members", label: "Members" },
-      { id: "invites", label: "Invites" },
-    ],
-  },
-  {
-    label: "Personal",
-    sections: [
-      { id: "cli", label: "CLI setup" },
-      { id: "devices", label: "Devices" },
-      { id: "timezone", label: "Timezone" },
-    ],
-  },
-];
 
 function SettingsSection({
   id,
@@ -74,6 +58,29 @@ export default async function SettingsPage() {
   const team = await getActiveTeam(userId);
   if (!team) return null;
 
+  const tLang = await getTranslations("language");
+  const t = await getTranslations("settings");
+
+  const navGroups = [
+    {
+      label: t("nav.workspace"),
+      sections: [
+        { id: "general", label: t("nav.general") },
+        { id: "members", label: t("nav.members") },
+        { id: "invites", label: t("nav.invites") },
+      ],
+    },
+    {
+      label: t("nav.personal"),
+      sections: [
+        { id: "cli", label: t("nav.cli") },
+        { id: "devices", label: t("nav.devices") },
+        { id: "timezone", label: t("nav.timezone") },
+        { id: "language", label: t("nav.language") },
+      ],
+    },
+  ];
+
   const [devices, timeZone, members] = await Promise.all([
     getMyTokens(team.id, userId),
     getViewerTimezone(userId),
@@ -86,21 +93,23 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold">Settings</h1>
+        <h1 className="text-xl font-semibold">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">
-          Workspace and personal settings for{" "}
-          <span className="font-medium text-foreground">{team.name}</span>.
+          {t.rich("subtitle", {
+            team: team.name,
+            strong: (c) => <span className="font-medium text-foreground">{c}</span>,
+          })}
         </p>
       </div>
 
       <div className="lg:grid lg:grid-cols-[180px_1fr] lg:gap-8">
-        <SettingsNav groups={NAV_GROUPS} />
+        <SettingsNav groups={navGroups} />
 
         <div className="min-w-0 space-y-6">
           <SettingsSection
             id="general"
-            title="General"
-            description="The team's name across the dashboard."
+            title={t("sections.generalTitle")}
+            description={t("sections.generalDescription")}
             icon={<Building2 className="h-4 w-4" />}
           >
             <TeamGeneralSettings teamId={team.id} teamName={team.name} canManage={canManage} />
@@ -108,13 +117,8 @@ export default async function SettingsPage() {
 
           <SettingsSection
             id="members"
-            title="Team members"
-            description={
-              <>
-                {members.length} member{members.length === 1 ? "" : "s"} in this team. Removing
-                someone only revokes their access — synced sessions stay in team history.
-              </>
-            }
+            title={t("sections.membersTitle")}
+            description={t("sections.membersDescription", { count: members.length })}
             icon={<Users className="h-4 w-4" />}
           >
             <TeamMembersSettings
@@ -127,8 +131,8 @@ export default async function SettingsPage() {
 
           <SettingsSection
             id="invites"
-            title="Invite teammates"
-            description="Anyone with this code can join the team."
+            title={t("sections.invitesTitle")}
+            description={t("sections.invitesDescription")}
             icon={<UserPlus className="h-4 w-4" />}
           >
             <InviteCodeCard
@@ -141,14 +145,10 @@ export default async function SettingsPage() {
 
           <SettingsSection
             id="cli"
-            title="Connect the CLI"
-            description={
-              <>
-                Run these commands on each developer machine.{" "}
-                <code className="rounded bg-muted px-1">devpulse login</code> opens your browser to
-                authorize — no manual tokens needed.
-              </>
-            }
+            title={t("sections.cliTitle")}
+            description={t.rich("cliSectionDescription", {
+              code: (c) => <code className="rounded bg-muted px-1">{c}</code>,
+            })}
             icon={<TerminalSquare className="h-4 w-4" />}
           >
             <CliSetupGuide compact />
@@ -156,13 +156,13 @@ export default async function SettingsPage() {
 
           <SettingsSection
             id="devices"
-            title="Connected devices"
+            title={t("sections.devicesTitle")}
             description={
               <>
                 {activeDeviceCount === 0
-                  ? "Devices appear here after you run devpulse login on a machine."
-                  : `${activeDeviceCount} active device${activeDeviceCount === 1 ? "" : "s"} can sync sessions for this team.`}{" "}
-                Revoke access if a laptop is lost or replaced.
+                  ? t("sections.devicesDescriptionEmpty")
+                  : t("sections.devicesDescriptionActive", { count: activeDeviceCount })}{" "}
+                {t("sections.devicesDescriptionSuffix")}
               </>
             }
             icon={<Laptop className="h-4 w-4" />}
@@ -172,16 +172,23 @@ export default async function SettingsPage() {
 
           <SettingsSection
             id="timezone"
-            title="Timezone"
-            description={
-              <>
-                Currently using {timeZone} ({formatTimezoneLabel(timeZone)}) for daily summaries
-                and &quot;Today&quot; filters.
-              </>
-            }
+            title={t("sections.timezoneTitle")}
+            description={t("sections.timezoneDescription", {
+              tz: timeZone,
+              label: formatTimezoneLabel(timeZone),
+            })}
             icon={<Clock className="h-4 w-4" />}
           >
             <TimezoneSettings currentTimezone={timeZone} />
+          </SettingsSection>
+
+          <SettingsSection
+            id="language"
+            title={tLang("section")}
+            description={tLang("sectionDescription")}
+            icon={<Globe className="h-4 w-4" />}
+          >
+            <LanguageSettings />
           </SettingsSection>
         </div>
       </div>

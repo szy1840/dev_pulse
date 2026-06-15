@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { format } from "date-fns";
 import { Laptop, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ type DeviceRow = {
 };
 
 export function ConnectedDevices({ devices }: { devices: DeviceRow[] }) {
+  const t = useTranslations("settings");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -35,10 +37,11 @@ export function ConnectedDevices({ devices }: { devices: DeviceRow[] }) {
     return (
       <div className="rounded-lg border border-dashed p-6 text-center">
         <Laptop className="mx-auto h-8 w-8 text-muted-foreground/60" />
-        <p className="mt-3 text-sm font-medium">No devices connected yet</p>
+        <p className="mt-3 text-sm font-medium">{t("devices.emptyTitle")}</p>
         <p className="mt-1 text-sm text-muted-foreground">
-          Run <code className="rounded bg-muted px-1">devpulse login</code> on your machine — your
-          browser will open to authorize this computer.
+          {t.rich("devices.emptyBody", {
+            code: (c) => <code className="rounded bg-muted px-1">{c}</code>,
+          })}
         </p>
       </div>
     );
@@ -51,14 +54,14 @@ export function ConnectedDevices({ devices }: { devices: DeviceRow[] }) {
           <DeviceRow key={d.id} device={d} pending={pending} onRevoke={revoke} />
         ))}
         {active.length === 0 && (
-          <p className="p-4 text-sm text-muted-foreground">No active devices.</p>
+          <p className="p-4 text-sm text-muted-foreground">{t("devices.noActive")}</p>
         )}
       </div>
 
       {revoked.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Revoked
+            {t("devices.revoked")}
           </p>
           <div className="divide-y rounded-lg border opacity-60">
             {revoked.map((d) => (
@@ -80,6 +83,7 @@ function DeviceRow({
   pending: boolean;
   onRevoke: (id: string) => void;
 }) {
+  const t = useTranslations("settings");
   return (
     <div className="flex items-center gap-3 p-3">
       <Laptop className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -87,13 +91,13 @@ function DeviceRow({
         <div className="flex items-center gap-2">
           <span className="truncate text-sm font-medium">{device.name}</span>
           <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{device.prefix}…</code>
-          {device.revokedAt && <Badge variant="destructive">Revoked</Badge>}
+          {device.revokedAt && <Badge variant="destructive">{t("devices.revoked")}</Badge>}
         </div>
         <p className="text-xs text-muted-foreground">
-          Connected {format(new Date(device.createdAt), "MMM d, yyyy")}
+          {t("devices.connected", { date: format(new Date(device.createdAt), "MMM d, yyyy") })}
           {device.lastUsedAt
-            ? ` · last sync ${format(new Date(device.lastUsedAt), "MMM d, HH:mm")}`
-            : " · never synced"}
+            ? t("devices.lastSync", { date: format(new Date(device.lastUsedAt), "MMM d, HH:mm") })
+            : t("devices.neverSynced")}
         </p>
       </div>
       {!device.revokedAt && (
@@ -102,7 +106,7 @@ function DeviceRow({
           size="icon"
           onClick={() => onRevoke(device.id)}
           disabled={pending}
-          aria-label={`Revoke ${device.name}`}
+          aria-label={t("devices.revokeAria", { name: device.name })}
         >
           <Trash2 className="h-4 w-4" />
         </Button>

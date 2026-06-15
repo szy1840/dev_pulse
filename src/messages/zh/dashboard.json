@@ -1,0 +1,61 @@
+{
+  "dashboard": {
+    "subtitle": "团队 AI 使用概览",
+    "summaryHeading": {
+      "dayCurrent": "今日团队摘要",
+      "day": "每日团队摘要",
+      "weekCurrent": "本周团队摘要",
+      "week": "每周团队摘要",
+      "monthCurrent": "本月团队摘要",
+      "month": "每月团队摘要",
+      "all": "全部时间团队摘要"
+    },
+    "summaryBadges": {
+      "sessions": "{count} 个会话",
+      "active": "{count} 人活跃"
+    },
+    "stats": {
+      "sessions": "会话数",
+      "sessionsHint": "{count} 条消息",
+      "totalTokens": "总 token 数",
+      "totalTokensHint": "已生成 {count}",
+      "activeMembers": "活跃成员",
+      "activeMembersHint": "本周期内有同步",
+      "activeTime": "活跃时长"
+    },
+    "tokenSegments": {
+      "input": "输入",
+      "output": "输出",
+      "cacheRead": "缓存读取",
+      "cacheWrite": "缓存写入"
+    },
+    "charts": {
+      "activityTitle": "活动趋势",
+      "activityDescHourly": "按小时统计的 token 与会话 — 团队总量或按成员拆分",
+      "activityDescDaily": "按天统计的 token 与会话 — 团队总量或按成员拆分",
+      "modelsTitle": "模型",
+      "modelsDesc": "各模型的会话占比",
+      "modelsCenterLabel": "会话",
+      "tokenCompositionTitle": "Token 构成",
+      "tokenCompositionDesc": "本周期 token 的去向",
+      "toolsTitle": "工具",
+      "toolsDesc": "正在使用的 AI 编程工具",
+      "topProjectsTitle": "热门项目",
+      "topProjectsDesc": "按会话数排名最活跃的项目",
+      "topProjectsValueLabel": "会话",
+      "topProjectsSubLabel": "Token",
+      "heatmapTitle": "团队编程时段",
+      "heatmapDesc": "按星期与小时统计的会话 — 全团队或单个成员"
+    },
+    "commitCosts": {
+      "title": "提交成本",
+      "description": "归因到已提交代码的 AI 开销",
+      "attributedTooltip": "与提交匹配的区间 token 占比",
+      "attributedBadge": "已归因 {pct}%",
+      "empty": "暂无与 AI 工作匹配的提交。当已同步的会话与本地 git 提交存在时间重叠后，成本将显示在此处。",
+      "tokUnit": "tok",
+      "footer": "已归因 {attributed} / {total} 区间 token",
+      "footerUnmatched": "{count} 个提交无匹配的 AI 工作"
+    }
+  }
+}

@@ -13,6 +13,7 @@ import {
   TIMEZONE_COOKIE,
 } from "@/lib/auth";
 import { isValidTimezone } from "@/lib/timezone";
+import { LOCALE_COOKIE, isLocale } from "@/lib/locale";
 import { newInviteCode } from "@/lib/ids";
 type ActionResult<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -265,6 +266,38 @@ export async function signOut(): Promise<void> {
   clearAuthCookies(await cookies());
   (await cookies()).delete(ACTIVE_TEAM_COOKIE);
   (await cookies()).delete(TIMEZONE_COOKIE);
+  (await cookies()).delete(LOCALE_COOKIE);
+}
+
+const LOCALE_COOKIE_OPTS = { path: "/", maxAge: 60 * 60 * 24 * 365 };
+
+/** Persist the viewer UI language to the cookie (next-intl source) and profile. */
+export async function updateLocale(locale: string): Promise<ActionResult> {
+  if (!isLocale(locale)) return { ok: false, error: "Unsupported language." };
+
+  (await cookies()).set(LOCALE_COOKIE, locale, LOCALE_COOKIE_OPTS);
+
+  // Best-effort durable store so the choice follows the user across devices.
+  const userId = await requireUserId();
+  const admin = getAdmin();
+  await admin.database
+    .from("profiles")
+    .update({ locale, updated_at: new Date().toISOString() })
+    .eq("id", userId);
+
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/**
+ * Mirror the saved profile language into the cookie on first authed visit so the
+ * choice follows the user to a new device. Called from LocaleBootstrap.
+ */
+export async function ensureLocale(locale: string): Promise<ActionResult> {
+  if (!isLocale(locale)) return { ok: false, error: "Unsupported language." };
+  (await cookies()).set(LOCALE_COOKIE, locale, LOCALE_COOKIE_OPTS);
+  revalidatePath("/", "layout");
+  return { ok: true };
 }
 
 const TIMEZONE_COOKIE_OPTS = { path: "/", maxAge: 60 * 60 * 24 * 365 };

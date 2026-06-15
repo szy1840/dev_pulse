@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Activity } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +12,7 @@ import { Label } from "@/components/ui/label";
 
 export function SignUpForm() {
   const router = useRouter();
+  const t = useTranslations("auth");
   const [pending, startTransition] = useTransition();
   const [step, setStep] = useState<"details" | "verify">("details");
   const [name, setName] = useState("");
@@ -30,11 +32,11 @@ export function SignUpForm() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(json.error ?? "Sign up failed.");
+        setError(json.error ?? t("signUp.failed"));
         return;
       }
       if (json.requireEmailVerification) {
-        setNotice("We emailed you a 6-digit code. Enter it below to finish.");
+        setNotice(t("signUp.verificationNotice"));
         setStep("verify");
       } else {
         router.push("/onboarding");
@@ -53,7 +55,7 @@ export function SignUpForm() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(json.error ?? "Verification failed.");
+        setError(json.error ?? t("verify.failed"));
         return;
       }
       router.push("/onboarding");
@@ -67,27 +69,27 @@ export function SignUpForm() {
         <div className="mx-auto flex items-center gap-2 font-semibold">
           <Activity className="h-5 w-5" /> DevPulse AI
         </div>
-        <CardTitle>{step === "details" ? "Create your account" : "Verify your email"}</CardTitle>
+        <CardTitle>{step === "details" ? t("signUp.title") : t("verify.title")}</CardTitle>
         <CardDescription>
           {step === "details"
-            ? "Start tracking your team's AI coding activity."
-            : `Enter the code sent to ${email}.`}
+            ? t("signUp.subtitle")
+            : t("verify.subtitle", { email })}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {step === "details" ? (
           <>
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name">{t("fields.name")}</Label>
               <Input
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Ada Lovelace"
+                placeholder={t("fields.namePlaceholder")}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("fields.email")}</Label>
               <Input
                 id="email"
                 type="email"
@@ -97,7 +99,7 @@ export function SignUpForm() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("fields.password")}</Label>
               <Input
                 id="password"
                 type="password"
@@ -109,12 +111,12 @@ export function SignUpForm() {
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button className="w-full" onClick={register} disabled={pending}>
-              {pending ? "Creating…" : "Create account"}
+              {pending ? t("signUp.submitting") : t("signUp.submit")}
             </Button>
             <p className="text-center text-sm text-muted-foreground">
-              Already have an account?{" "}
+              {t("signUp.haveAccount")}{" "}
               <Link href="/sign-in" className="font-medium text-foreground underline-offset-4 hover:underline">
-                Sign in
+                {t("signUp.signIn")}
               </Link>
             </p>
           </>
@@ -122,7 +124,7 @@ export function SignUpForm() {
           <>
             {notice && <p className="text-sm text-muted-foreground">{notice}</p>}
             <div className="space-y-2">
-              <Label htmlFor="otp">Verification code</Label>
+              <Label htmlFor="otp">{t("verify.codeLabel")}</Label>
               <Input
                 id="otp"
                 inputMode="numeric"
@@ -134,14 +136,14 @@ export function SignUpForm() {
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button className="w-full" onClick={verify} disabled={pending}>
-              {pending ? "Verifying…" : "Verify & continue"}
+              {pending ? t("verify.submitting") : t("verify.submit")}
             </Button>
             <button
               type="button"
               className="w-full text-center text-sm text-muted-foreground underline-offset-4 hover:underline"
               onClick={() => setStep("details")}
             >
-              Back
+              {t("verify.back")}
             </button>
           </>
         )}

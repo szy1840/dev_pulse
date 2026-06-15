@@ -6,9 +6,16 @@ import {
   type SessionLike,
 } from "./summary";
 import { prettyTool } from "./format";
+import type { Locale } from "./locale";
 
 const MODEL = process.env.OPENROUTER_CHAT_MODEL || "anthropic/claude-haiku-4.5";
 export const SUMMARY_VERSION = "v2";
+
+/** Appended to every system prompt so the model replies in the viewer's language. */
+const LANGUAGE_DIRECTIVE: Record<Locale, string> = {
+  en: "Respond in English.",
+  zh: "请用简体中文回复，所有内容均使用中文。",
+};
 
 export type GeneratedSummary = { text: string; model: string | null };
 
@@ -67,16 +74,30 @@ const WORK_FOCUS =
   "Write 1-2 plain sentences. No markdown, no preamble, no bullet points.";
 
 // Period phrase ("today" / "this week" / "in June 2026") flows into the prompt
-// so the same machinery summarizes any calendar period.
-const userSystem = (phrase: string) =>
-  `You write a concise recap of one engineer's AI coding activity ${phrase} for a team dashboard. ` + WORK_FOCUS;
+// so the same machinery summarizes any calendar period. The language directive
+// makes the model write the recap in the viewer's locale.
+const userSystem = (phrase: string, locale: Locale) =>
+  `You write a concise recap of one engineer's AI coding activity ${phrase} for a team dashboard. ` +
+  WORK_FOCUS +
+  " " +
+  LANGUAGE_DIRECTIVE[locale];
 
-const userToolSystem = (phrase: string) =>
+const userToolSystem = (phrase: string, locale: Locale) =>
   `You write a concise recap of one engineer's work with a specific AI coding agent ${phrase} for a team dashboard. ` +
-  WORK_FOCUS;
+  WORK_FOCUS +
+  " " +
+  LANGUAGE_DIRECTIVE[locale];
 
-const teamSystem = (phrase: string) =>
-  `You write a concise recap of an engineering team's AI coding activity ${phrase} for a dashboard. ` + WORK_FOCUS;
+const teamSystem = (phrase: string, locale: Locale) =>
+  `You write a concise recap of an engineering team's AI coding activity ${phrase} for a dashboard. ` +
+  WORK_FOCUS +
+  " " +
+  LANGUAGE_DIRECTIVE[locale];
+
+/** Locale-aware empty-period line (skips the LLM when there's nothing to summarize). */
+function emptyLine(locale: Locale, en: string, zh: string): string {
+  return locale === "zh" ? zh : en;
+}
 
 function storedModel(model: string | null): string {
   return model ? `${model}:${SUMMARY_VERSION}` : SUMMARY_VERSION;
@@ -91,10 +112,16 @@ export function isStoredSummaryFresh(storedModel: string | null): boolean {
 export async function generateUserDaily(
   name: string,
   sessions: SessionLike[],
-  periodPhrase = "today"
+  periodPhrase = "today",
+  locale: Locale = "en"
 ): Promise<GeneratedSummary> {
   const fallback = buildDailyUserSummary(name, sessions);
-  if (sessions.length === 0) return { text: fallback, model: null };
+  if (sessions.length === 0) {
+    return {
+      text: emptyLine(locale, fallback, `${name}在此期间没有 AI 编程活动。`),
+      model: null,
+    };
+  }
 
   const { projects, notes } = workContext(sessions);
   const prompt = [
@@ -105,7 +132,7 @@ export async function generateUserDaily(
     .filter(Boolean)
     .join("\n");
 
-  const text = await complete(userSystem(periodPhrase), prompt);
+  const text = await complete(userSystem(periodPhrase, locale), prompt);
   return text ? { text, model: storedModel(MODEL) } : { text: fallback, model: SUMMARY_VERSION };
 }
 
@@ -114,12 +141,18 @@ export async function generateUserToolDaily(
   name: string,
   tool: string,
   sessions: SessionLike[],
-  periodPhrase = "today"
+  periodPhrase = "today",
+  locale: Locale = "en"
 ): Promise<GeneratedSummary> {
   const fallback = buildDailyUserToolSummary(name, tool, sessions);
-  if (sessions.length === 0) return { text: fallback, model: null };
-
   const agent = prettyTool(tool);
+  if (sessions.length === 0) {
+    return {
+      text: emptyLine(locale, fallback, `此期间没有 ${agent} 会话。`),
+      model: null,
+    };
+  }
+
   const { projects, notes } = workContext(sessions);
   const prompt = [
     `Engineer: ${name}`,
@@ -130,7 +163,7 @@ export async function generateUserToolDaily(
     .filter(Boolean)
     .join("\n");
 
-  const text = await complete(userToolSystem(periodPhrase), prompt);
+  const text = await complete(userToolSystem(periodPhrase, locale), prompt);
   return text ? { text, model: storedModel(MODEL) } : { text: fallback, model: SUMMARY_VERSION };
 }
 
@@ -139,10 +172,16 @@ export async function generateTeamDaily(
   teamName: string,
   sessions: SessionLike[],
   activeMembers: number,
-  periodPhrase = "today"
+  periodPhrase = "today",
+  locale: Locale = "en"
 ): Promise<GeneratedSummary> {
   const fallback = buildDailyTeamSummary(teamName, sessions, activeMembers);
-  if (sessions.length === 0) return { text: fallback, model: null };
+  if (sessions.length === 0) {
+    return {
+      text: emptyLine(locale, fallback, `${teamName}在此期间没有 AI 编程活动。`),
+      model: null,
+    };
+  }
 
   const { projects, notes } = workContext(sessions);
   const prompt = [
@@ -154,6 +193,6 @@ export async function generateTeamDaily(
     .filter(Boolean)
     .join("\n");
 
-  const text = await complete(teamSystem(periodPhrase), prompt);
+  const text = await complete(teamSystem(periodPhrase, locale), prompt);
   return text ? { text, model: storedModel(MODEL) } : { text: fallback, model: SUMMARY_VERSION };
 }

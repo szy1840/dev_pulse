@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { LayoutGrid, Rows3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +15,7 @@ const STORAGE_KEY = "dp-members-view";
  * server-generated.
  */
 export function MembersViewToggle({ cards, table }: { cards: ReactNode; table: ReactNode }) {
+  const t = useTranslations("membersView");
   const [mode, setMode] = useState<Mode>("cards");
 
   useEffect(() => {
@@ -41,7 +43,7 @@ export function MembersViewToggle({ cards, table }: { cards: ReactNode; table: R
             )}
           >
             <LayoutGrid className="h-3.5 w-3.5" />
-            Detail
+            {t("detail")}
           </button>
           <button
             type="button"
@@ -54,7 +56,7 @@ export function MembersViewToggle({ cards, table }: { cards: ReactNode; table: R
             )}
           >
             <Rows3 className="h-3.5 w-3.5" />
-            Compact
+            {t("compact")}
           </button>
         </div>
       </div>

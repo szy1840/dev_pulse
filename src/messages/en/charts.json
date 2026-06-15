@@ -1,0 +1,26 @@
+{
+  "charts": {
+    "empty": {
+      "noData": "No data yet.",
+      "noActivity": "No activity yet.",
+      "noTokens": "No tokens yet."
+    },
+    "trend": {
+      "team": "Team",
+      "byMember": "By member",
+      "input": "Input",
+      "output": "Output",
+      "sessions": "Sessions",
+      "tokens": "Tokens"
+    },
+    "barList": {
+      "value": "Value"
+    },
+    "heatmap": {
+      "allTeam": "All team",
+      "less": "Less",
+      "more": "More",
+      "cellTitle": "{day} {hour}:00 — {count, plural, one {# session} other {# sessions}}"
+    }
+  }
+}

@@ -1,7 +1,9 @@
+import { getLocale } from "next-intl/server";
 import { getSessionsForSummary } from "@/lib/queries";
 import { getUserPeriodSummaries } from "@/lib/daily-summary";
 import { Card, CardContent } from "@/components/ui/card";
 import { MemberTodayPanel } from "@/components/member-today-panel";
+import { type Locale } from "@/lib/locale";
 import type { PeriodRange } from "@/lib/period";
 
 /**
@@ -23,6 +25,7 @@ export async function MemberSummarySection({
   range: PeriodRange;
   timeZone: string;
 }) {
+  const locale = (await getLocale()) as Locale;
   const summarySessions = await getSessionsForSummary(teamId, range, memberId);
   const summaries = await getUserPeriodSummaries(
     teamId,
@@ -30,7 +33,8 @@ export async function MemberSummarySection({
     memberName,
     range,
     timeZone,
-    summarySessions
+    summarySessions,
+    locale
   );
 
   return (

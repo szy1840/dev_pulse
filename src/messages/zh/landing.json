@@ -1,0 +1,59 @@
+{
+  "landing": {
+    "nav": {
+      "openDashboard": "打开仪表盘",
+      "signIn": "登录",
+      "getStarted": "免费开始"
+    },
+    "hero": {
+      "badge": "CLI 优先 · 团队仪表盘 · 不上传代码",
+      "headline": "看清团队如何使用 AI 编程工具",
+      "subhead": "DevPulse 将本地的 AI 编程会话转化为团队级的使用洞察、成本透明度和每日工作摘要。",
+      "goToDashboard": "进入仪表盘",
+      "createAccount": "免费创建账户",
+      "haveAccount": "我已有账户",
+      "flow": "先创建账户 → 新建或加入团队 → 再在你的机器上连接 CLI。"
+    },
+    "how": {
+      "eyebrow": "工作原理",
+      "title": "四步走，从注册到团队全景可见",
+      "step1Title": "注册并加入团队",
+      "step1Body": "创建账户，然后新建团队，或使用邀请码加入现有团队。",
+      "step1Cta": "立即注册",
+      "step2Title": "在你的机器上登录",
+      "step2Body": "安装 CLI 并运行登录命令——浏览器会自动打开以授权这台电脑。",
+      "step3Title": "管理设备（可选）",
+      "step3Body": "随时在「设置」中查看已连接的机器并撤销访问权限。",
+      "step3Cta": "打开设置",
+      "step4Title": "同步你的会话",
+      "step4Body": "扫描本地 AI 工具日志并上传元数据——随时可再次运行。"
+    },
+    "features": {
+      "eyebrow": "你将获得",
+      "title": "由本地会话元数据构建的团队仪表盘",
+      "toolsTitle": "工具与模型",
+      "toolsBody": "查看每个会话使用了哪些编程智能体（Cursor、Claude Code、OpenClaw）和模型。",
+      "tokensTitle": "Token 与活跃度",
+      "tokensBody": "按团队或成员追踪 token 用量、会话数、活跃时长以及随时间变化的趋势。",
+      "memberTitle": "成员活跃情况",
+      "memberBody": "按人查看：谁在活跃、做了什么、以及智能体如何分配他们的一天。",
+      "summariesTitle": "每日摘要",
+      "summariesBody": "为每位成员和整个团队自动生成的 AI 回顾——聚焦于交付了什么，而非 token 数量。",
+      "historyTitle": "会话历史",
+      "historyBody": "浏览已同步的会话，包含项目、智能体、模型，以及每个会话的简短摘要。",
+      "privacyTitle": "隐私优先设计",
+      "privacyBody": "仅上传派生的元数据和摘要——绝不上传完整记录、提示词或代码。"
+    },
+    "cta": {
+      "title": "准备好让 AI 的工作成果一目了然了吗？",
+      "bodyUser": "在你的机器上运行 devpulse login 以连接，然后运行 devpulse sync 上传会话。",
+      "bodyGuest": "从免费账户开始。团队设置完成后即可连接 CLI。",
+      "settings": "设置",
+      "viewDashboard": "查看仪表盘",
+      "getStartedFree": "免费开始"
+    },
+    "footer": {
+      "tagline": "为小团队打造的轻量级 AI 工作洞察"
+    }
+  }
+}

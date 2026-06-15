@@ -2,6 +2,7 @@ import { getAdmin } from "./insforge/admin";
 import { generateUserDaily, generateUserToolDaily, generateTeamDaily, isStoredSummaryFresh } from "./ai-summary";
 import { buildDailyTeamSummary, buildDailyUserSummary, type SessionLike } from "./summary";
 import { dayKeyInTimezone, DEFAULT_TIMEZONE } from "./timezone";
+import { DEFAULT_LOCALE, type Locale } from "./locale";
 import type { PeriodRange } from "./period";
 
 /** @deprecated Use dayKeyInTimezone from ./timezone */
@@ -17,6 +18,7 @@ async function getStored(
   scopeId: string,
   day: string,
   timeZone: string,
+  locale: Locale,
   tool = "",
   granularity = "day"
 ): Promise<StoredRow | null> {
@@ -31,6 +33,7 @@ async function getStored(
     .eq("tool", tool)
     .eq("timezone", timeZone)
     .eq("granularity", granularity)
+    .eq("locale", locale)
     .maybeSingle();
   return (data as StoredRow | null) ?? null;
 }
@@ -41,6 +44,7 @@ async function store(
   scopeId: string,
   day: string,
   timeZone: string,
+  locale: Locale,
   summary: string,
   model: string | null,
   sessionCount: number,
@@ -58,12 +62,13 @@ async function store(
         tool,
         timezone: timeZone,
         granularity,
+        locale,
         summary,
         model,
         session_count: sessionCount,
       },
     ],
-    { onConflict: "team_id,scope,scope_id,day,tool,timezone,granularity" }
+    { onConflict: "team_id,scope,scope_id,day,tool,timezone,granularity,locale" }
   );
   if (error) console.error("daily_summaries upsert failed", error);
 }
@@ -82,13 +87,14 @@ export async function getTeamDailySummary(
   day: string,
   timeZone: string,
   sessions: SessionLike[],
-  activeMembers: number
+  activeMembers: number,
+  locale: Locale = DEFAULT_LOCALE
 ): Promise<string> {
-  const existing = await getStored(teamId, "team", teamId, day, timeZone);
+  const existing = await getStored(teamId, "team", teamId, day, timeZone, locale);
   if (existing && isFresh(existing, sessions.length)) return existing.summary;
 
-  const { text, model } = await generateTeamDaily(teamName, sessions, activeMembers);
-  await store(teamId, "team", teamId, day, timeZone, text, model, sessions.length);
+  const { text, model } = await generateTeamDaily(teamName, sessions, activeMembers, "today", locale);
+  await store(teamId, "team", teamId, day, timeZone, locale, text, model, sessions.length);
   return text;
 }
 
@@ -99,13 +105,14 @@ export async function getUserDailySummary(
   name: string,
   day: string,
   timeZone: string,
-  sessions: SessionLike[]
+  sessions: SessionLike[],
+  locale: Locale = DEFAULT_LOCALE
 ): Promise<string> {
-  const existing = await getStored(teamId, "user", userId, day, timeZone);
+  const existing = await getStored(teamId, "user", userId, day, timeZone, locale);
   if (existing && isFresh(existing, sessions.length)) return existing.summary;
 
-  const { text, model } = await generateUserDaily(name, sessions);
-  await store(teamId, "user", userId, day, timeZone, text, model, sessions.length);
+  const { text, model } = await generateUserDaily(name, sessions, "today", locale);
+  await store(teamId, "user", userId, day, timeZone, locale, text, model, sessions.length);
   return text;
 }
 
@@ -117,13 +124,14 @@ export async function getUserToolDailySummary(
   tool: string,
   day: string,
   timeZone: string,
-  sessions: SessionLike[]
+  sessions: SessionLike[],
+  locale: Locale = DEFAULT_LOCALE
 ): Promise<string> {
-  const existing = await getStored(teamId, "user", userId, day, timeZone, tool);
+  const existing = await getStored(teamId, "user", userId, day, timeZone, locale, tool);
   if (existing && isFresh(existing, sessions.length)) return existing.summary;
 
-  const { text, model } = await generateUserToolDaily(name, tool, sessions);
-  await store(teamId, "user", userId, day, timeZone, text, model, sessions.length, tool);
+  const { text, model } = await generateUserToolDaily(name, tool, sessions, "today", locale);
+  await store(teamId, "user", userId, day, timeZone, locale, text, model, sessions.length, tool);
   return text;
 }
 
@@ -138,17 +146,18 @@ export async function getTeamPeriodSummary(
   range: PeriodRange,
   timeZone: string,
   sessions: SessionLike[],
-  activeMembers: number
+  activeMembers: number,
+  locale: Locale = DEFAULT_LOCALE
 ): Promise<string> {
   if (range.view === "all") {
     return buildDailyTeamSummary(teamName, sessions, activeMembers);
   }
 
-  const existing = await getStored(teamId, "team", teamId, range.anchor, timeZone, "", range.view);
+  const existing = await getStored(teamId, "team", teamId, range.anchor, timeZone, locale, "", range.view);
   if (existing && isFresh(existing, sessions.length)) return existing.summary;
 
-  const { text, model } = await generateTeamDaily(teamName, sessions, activeMembers, range.phrase);
-  await store(teamId, "team", teamId, range.anchor, timeZone, text, model, sessions.length, "", range.view);
+  const { text, model } = await generateTeamDaily(teamName, sessions, activeMembers, range.phrase, locale);
+  await store(teamId, "team", teamId, range.anchor, timeZone, locale, text, model, sessions.length, "", range.view);
   return text;
 }
 
@@ -159,17 +168,18 @@ export async function getUserPeriodSummary(
   name: string,
   range: PeriodRange,
   timeZone: string,
-  sessions: SessionLike[]
+  sessions: SessionLike[],
+  locale: Locale = DEFAULT_LOCALE
 ): Promise<string> {
   if (range.view === "all") {
     return buildDailyUserSummary(name, sessions);
   }
 
-  const existing = await getStored(teamId, "user", userId, range.anchor, timeZone, "", range.view);
+  const existing = await getStored(teamId, "user", userId, range.anchor, timeZone, locale, "", range.view);
   if (existing && isFresh(existing, sessions.length)) return existing.summary;
 
-  const { text, model } = await generateUserDaily(name, sessions, range.phrase);
-  await store(teamId, "user", userId, range.anchor, timeZone, text, model, sessions.length, "", range.view);
+  const { text, model } = await generateUserDaily(name, sessions, range.phrase, locale);
+  await store(teamId, "user", userId, range.anchor, timeZone, locale, text, model, sessions.length, "", range.view);
   return text;
 }
 
@@ -181,17 +191,18 @@ async function getUserToolPeriodSummary(
   tool: string,
   range: PeriodRange,
   timeZone: string,
-  sessions: SessionLike[]
+  sessions: SessionLike[],
+  locale: Locale = DEFAULT_LOCALE
 ): Promise<string> {
   if (range.view === "all") {
     return buildDailyUserSummary(name, sessions);
   }
 
-  const existing = await getStored(teamId, "user", userId, range.anchor, timeZone, tool, range.view);
+  const existing = await getStored(teamId, "user", userId, range.anchor, timeZone, locale, tool, range.view);
   if (existing && isFresh(existing, sessions.length)) return existing.summary;
 
-  const { text, model } = await generateUserToolDaily(name, tool, sessions, range.phrase);
-  await store(teamId, "user", userId, range.anchor, timeZone, text, model, sessions.length, tool, range.view);
+  const { text, model } = await generateUserToolDaily(name, tool, sessions, range.phrase, locale);
+  await store(teamId, "user", userId, range.anchor, timeZone, locale, text, model, sessions.length, tool, range.view);
   return text;
 }
 
@@ -213,7 +224,8 @@ export async function getUserPeriodSummaries(
   name: string,
   range: PeriodRange,
   timeZone: string,
-  sessions: SessionLike[]
+  sessions: SessionLike[],
+  locale: Locale = DEFAULT_LOCALE
 ): Promise<UserTodaySummaries> {
   const byToolMap = new Map<string, SessionLike[]>();
   for (const s of sessions) {
@@ -227,9 +239,9 @@ export async function getUserPeriodSummaries(
   );
 
   const [overall, ...toolSummaries] = await Promise.all([
-    getUserPeriodSummary(teamId, userId, name, range, timeZone, sessions),
+    getUserPeriodSummary(teamId, userId, name, range, timeZone, sessions, locale),
     ...tools.map((tool) =>
-      getUserToolPeriodSummary(teamId, userId, name, tool, range, timeZone, byToolMap.get(tool) ?? [])
+      getUserToolPeriodSummary(teamId, userId, name, tool, range, timeZone, byToolMap.get(tool) ?? [], locale)
     ),
   ]);
 

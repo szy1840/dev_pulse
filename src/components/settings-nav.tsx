@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 export type SettingsSection = { id: string; label: string };
@@ -12,6 +13,7 @@ export type SettingsNavGroup = { label: string; sections: SettingsSection[] };
  * scroller on small ones.
  */
 export function SettingsNav({ groups }: { groups: SettingsNavGroup[] }) {
+  const t = useTranslations("settings");
   const sectionIds = groups.flatMap((g) => g.sections.map((s) => s.id));
   const [active, setActive] = useState(sectionIds[0] ?? "");
 
@@ -36,7 +38,7 @@ export function SettingsNav({ groups }: { groups: SettingsNavGroup[] }) {
 
   return (
     <nav
-      aria-label="Settings sections"
+      aria-label={t("nav.ariaLabel")}
       className={cn(
         "flex gap-x-4 gap-y-1 overflow-x-auto pb-2",
         "lg:sticky lg:top-32 lg:flex-col lg:gap-0 lg:self-start lg:pb-0"

@@ -2,9 +2,11 @@ import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { Coins, Clock, ChevronRight } from "lucide-react";
 import { requireUserId, getActiveTeam, getViewerTimezone } from "@/lib/auth";
+import { getTranslations, getLocale } from "next-intl/server";
 import { getMemberActivity, getSessionsForSummary } from "@/lib/queries";
 import { getUserPeriodSummaries } from "@/lib/daily-summary";
 import { resolveRange, type PeriodRange } from "@/lib/period";
+import { type Locale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 import { MemberTodayPanel } from "@/components/member-today-panel";
 import { formatCompact, formatNumber, formatDuration, formatActivityHint } from "@/lib/format";
@@ -45,6 +47,7 @@ export default async function MembersPage({
   const team = await getActiveTeam(userId);
   if (!team) return null;
 
+  const t = await getTranslations("members");
   const params = await searchParams;
   const timeZone = await getViewerTimezone(userId);
   const range = resolveRange(params.view ?? params.period, params.anchor, timeZone);
@@ -62,6 +65,7 @@ export default async function MembersPage({
   }
 
   // Generate (or read cached) period summaries per member in parallel.
+  const locale = (await getLocale()) as Locale;
   const periodSummaries = new Map(
     await Promise.all(
       members.map(async (m) => [
@@ -69,30 +73,30 @@ export default async function MembersPage({
         await getUserPeriodSummaries(
           team.id,
           m.userId,
-          m.name ?? "This member",
+          m.name ?? t("thisMemberFallback"),
           range,
           timeZone,
-          byUser.get(m.userId) ?? []
+          byUser.get(m.userId) ?? [],
+          locale
         ),
       ] as const)
     )
   );
 
   const active = members.filter((m) => m.sessionCount > 0);
-  const tokenShare = active.map((m) => ({ name: m.name ?? "Member", value: m.tokens }));
+  const tokenShare = active.map((m) => ({ name: m.name ?? t("memberFallback"), value: m.tokens }));
   const activeTimeRanking = active
     .filter((m) => m.activeMs > 0)
     .sort((a, b) => b.activeMs - a.activeMs)
-    .map((m) => ({ name: m.name ?? "Member", value: m.activeMs }));
+    .map((m) => ({ name: m.name ?? t("memberFallback"), value: m.activeMs }));
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">Members</h1>
+          <h1 className="text-xl font-semibold">{t("title")}</h1>
           <p className="text-sm text-muted-foreground">
-            {members.length} member{members.length === 1 ? "" : "s"} · {active.length} active in this
-            period
+            {t("summary", { count: members.length, active: active.length })}
           </p>
         </div>
         <PeriodSelector
@@ -114,24 +118,24 @@ export default async function MembersPage({
           />
           <div className="grid gap-4 lg:grid-cols-2">
             <ChartCard
-              title="Token share"
-              description="Token consumption across the team"
+              title={t("charts.tokenShareTitle")}
+              description={t("charts.tokenShareDescription")}
               icon={<Coins className="h-4 w-4" />}
             >
               <DonutChart
                 data={tokenShare}
-                centerLabel="tokens"
+                centerLabel={t("charts.tokensCenterLabel")}
                 centerValue={formatCompact(tokenShare.reduce((a, m) => a + m.value, 0))}
               />
             </ChartCard>
             <ChartCard
-              title="Active time by member"
-              description="Who spent the most time in AI sessions"
+              title={t("charts.activeTimeByMemberTitle")}
+              description={t("charts.activeTimeByMemberDescription")}
               icon={<Clock className="h-4 w-4" />}
             >
               <BarListChart
                 data={activeTimeRanking}
-                valueLabel="Active time"
+                valueLabel={t("charts.activeTimeValueLabel")}
                 format="duration"
                 height={Math.max(160, activeTimeRanking.length * 36)}
               />
@@ -148,7 +152,7 @@ export default async function MembersPage({
   );
 }
 
-function MemberCards({
+async function MemberCards({
   members,
   viewerId,
   range,
@@ -159,6 +163,7 @@ function MemberCards({
   range: PeriodRange;
   summaries: Map<string, { overall: string; byTool: { tool: string; summary: string; sessions: { summary: string | null; projectName: string | null }[] }[] }>;
 }) {
+  const t = await getTranslations("members");
   return (
     <div className="grid gap-4">
       {members.map((m, i) => (
@@ -183,22 +188,22 @@ function MemberCards({
                     href={memberHref(m.userId, range)}
                     className="truncate underline-offset-4 hover:underline"
                   >
-                    {m.name ?? "Member"}
+                    {m.name ?? t("memberFallback")}
                   </Link>
-                  {m.role === "owner" && <Badge variant="secondary">Owner</Badge>}
-                  {m.userId === viewerId && <Badge variant="outline">You</Badge>}
+                  {m.role === "owner" && <Badge variant="secondary">{t("owner")}</Badge>}
+                  {m.userId === viewerId && <Badge variant="outline">{t("you")}</Badge>}
                 </CardTitle>
                 <CardDescription className="truncate">{m.email}</CardDescription>
               </div>
               <div className="ml-auto flex items-center gap-3">
                 <span className="text-right text-sm text-muted-foreground">
                   {m.lastActive
-                    ? `Active ${formatDistanceToNow(m.lastActive, { addSuffix: true })}`
-                    : "No activity yet"}
+                    ? t("activeAgo", { time: formatDistanceToNow(m.lastActive, { addSuffix: true }) })
+                    : t("noActivity")}
                 </span>
                 <Link
                   href={memberHref(m.userId, range)}
-                  aria-label={`View ${m.name ?? "member"}'s profile`}
+                  aria-label={t("viewProfile", { name: m.name ?? t("memberFallback") })}
                   className="flex h-8 w-8 items-center justify-center rounded-md border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -208,12 +213,12 @@ function MemberCards({
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex flex-wrap gap-6 text-sm">
-              <Stat label="Sessions" value={formatNumber(m.sessionCount)} />
-              <Stat label="Tokens" value={formatCompact(m.tokens)} />
-              <Stat label="Active time" value={formatDuration(m.activeMs)} />
+              <Stat label={t("stats.sessions")} value={formatNumber(m.sessionCount)} />
+              <Stat label={t("stats.tokens")} value={formatCompact(m.tokens)} />
+              <Stat label={t("stats.activeTime")} value={formatDuration(m.activeMs)} />
               {m.peakConcurrency > 1 && (
                 <Stat
-                  label="Peak concurrent"
+                  label={t("stats.peakConcurrent")}
                   value={String(m.peakConcurrency)}
                   hint={formatActivityHint(m.peakConcurrency, m.parallelFactor)}
                 />
@@ -221,7 +226,7 @@ function MemberCards({
             </div>
             {m.toolBreakdown.length > 0 && (
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-muted-foreground">Agents:</span>
+                <span className="text-xs text-muted-foreground">{t("agents")}</span>
                 {m.toolBreakdown.map(({ tool, count }) => (
                   <span key={tool} className="inline-flex items-center gap-1.5">
                     <ToolBadge tool={tool} className="text-xs" />
@@ -233,7 +238,7 @@ function MemberCards({
             <MemberTodayPanel
               overall={
                 summaries.get(m.userId)?.overall ??
-                `${m.name ?? "Member"} had no AI coding sessions in this period.`
+                t("noSessionsInPeriod", { name: m.name ?? t("memberFallback") })
               }
               byTool={summaries.get(m.userId)?.byTool ?? []}
               periodWord={range.shortLabel}
@@ -245,7 +250,7 @@ function MemberCards({
   );
 }
 
-function MemberTable({
+async function MemberTable({
   members,
   viewerId,
   range,
@@ -254,6 +259,7 @@ function MemberTable({
   viewerId: string;
   range: PeriodRange;
 }) {
+  const t = await getTranslations("members");
   return (
     <Card>
       <CardContent className="pt-4">
@@ -261,12 +267,12 @@ function MemberTable({
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 text-center">#</TableHead>
-              <TableHead>Member</TableHead>
-              <TableHead className="text-right">Sessions</TableHead>
-              <TableHead className="text-right">Tokens</TableHead>
-              <TableHead className="text-right">Active time</TableHead>
-              <TableHead>Agents</TableHead>
-              <TableHead className="text-right">Last active</TableHead>
+              <TableHead>{t("table.member")}</TableHead>
+              <TableHead className="text-right">{t("stats.sessions")}</TableHead>
+              <TableHead className="text-right">{t("stats.tokens")}</TableHead>
+              <TableHead className="text-right">{t("stats.activeTime")}</TableHead>
+              <TableHead>{t("detail.agentsTitle")}</TableHead>
+              <TableHead className="text-right">{t("stats.lastActive")}</TableHead>
               <TableHead className="w-8" />
             </TableRow>
           </TableHeader>
@@ -286,10 +292,10 @@ function MemberTable({
                   <Link href={memberHref(m.userId, range)} className="flex items-center gap-2.5">
                     <Avatar name={m.name} imageUrl={m.imageUrl} className="h-7 w-7" />
                     <span className="font-medium underline-offset-4 hover:underline">
-                      {m.name ?? "Member"}
+                      {m.name ?? t("memberFallback")}
                     </span>
-                    {m.role === "owner" && <Badge variant="secondary">Owner</Badge>}
-                    {m.userId === viewerId && <Badge variant="outline">You</Badge>}
+                    {m.role === "owner" && <Badge variant="secondary">{t("owner")}</Badge>}
+                    {m.userId === viewerId && <Badge variant="outline">{t("you")}</Badge>}
                   </Link>
                 </TableCell>
                 <TableCell className="text-right tabular-nums">{formatNumber(m.sessionCount)}</TableCell>
@@ -313,7 +319,7 @@ function MemberTable({
                 <TableCell>
                   <Link
                     href={memberHref(m.userId, range)}
-                    aria-label={`View ${m.name ?? "member"}'s profile`}
+                    aria-label={t("viewProfile", { name: m.name ?? t("memberFallback") })}
                     className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                   >
                     <ChevronRight className="h-4 w-4" />

@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { COMMON_TIMEZONES, formatTimezoneLabel } from "@/lib/timezone";
@@ -19,6 +20,7 @@ export function TimezoneSettings({
 }: {
   currentTimezone: string;
 }) {
+  const t = useTranslations("settings");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [value, setValue] = useState(currentTimezone);
@@ -49,7 +51,7 @@ export function TimezoneSettings({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="timezone">Timezone</Label>
+        <Label htmlFor="timezone">{t("timezone.label")}</Label>
         <select
           id="timezone"
           value={value}
@@ -57,7 +59,7 @@ export function TimezoneSettings({
           onChange={(e) => save(e.target.value)}
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <optgroup label="Common">
+          <optgroup label={t("timezone.common")}>
             {options.common.map((tz) => (
               <option key={tz} value={tz}>
                 {tz} ({formatTimezoneLabel(tz)})
@@ -65,7 +67,7 @@ export function TimezoneSettings({
             ))}
           </optgroup>
           {options.rest.length > 0 && (
-            <optgroup label="All">
+            <optgroup label={t("timezone.all")}>
               {options.rest.map((tz) => (
                 <option key={tz} value={tz}>
                   {tz}
@@ -74,9 +76,7 @@ export function TimezoneSettings({
             </optgroup>
           )}
         </select>
-        <p className="text-xs text-muted-foreground">
-          Dashboard &quot;Today&quot; summaries and stats use midnight in this timezone.
-        </p>
+        <p className="text-xs text-muted-foreground">{t("timezone.helper")}</p>
       </div>
 
       {browserTz && browserTz !== value && (
@@ -87,7 +87,7 @@ export function TimezoneSettings({
           disabled={pending}
           onClick={() => save(browserTz)}
         >
-          Use browser timezone ({browserTz})
+          {t("timezone.useBrowser", { tz: browserTz })}
         </Button>
       )}
 

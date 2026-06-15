@@ -1,0 +1,26 @@
+{
+  "charts": {
+    "empty": {
+      "noData": "暂无数据。",
+      "noActivity": "暂无活动。",
+      "noTokens": "暂无 token 数据。"
+    },
+    "trend": {
+      "team": "团队",
+      "byMember": "按成员",
+      "input": "输入",
+      "output": "输出",
+      "sessions": "会话",
+      "tokens": "Token"
+    },
+    "barList": {
+      "value": "数值"
+    },
+    "heatmap": {
+      "allTeam": "全团队",
+      "less": "较少",
+      "more": "较多",
+      "cellTitle": "{day} {hour}:00 — {count} 个会话"
+    }
+  }
+}

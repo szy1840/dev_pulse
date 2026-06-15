@@ -1,0 +1,59 @@
+{
+  "landing": {
+    "nav": {
+      "openDashboard": "Open dashboard",
+      "signIn": "Sign in",
+      "getStarted": "Get started"
+    },
+    "hero": {
+      "badge": "CLI-first · Team dashboard · No code uploaded",
+      "headline": "See how your team uses AI coding tools",
+      "subhead": "DevPulse turns local AI coding sessions into team-level usage insights, cost visibility, and daily work summaries.",
+      "goToDashboard": "Go to dashboard",
+      "createAccount": "Create free account",
+      "haveAccount": "I already have an account",
+      "flow": "Account first → create or join a team → then connect the CLI on your machine."
+    },
+    "how": {
+      "eyebrow": "How it works",
+      "title": "From sign-up to team visibility in four steps",
+      "step1Title": "Sign up & join a team",
+      "step1Body": "Create an account, then create a new team or join with an invite code.",
+      "step1Cta": "Sign up",
+      "step2Title": "Log in on your machine",
+      "step2Body": "Install the CLI and run login — your browser opens to authorize this computer.",
+      "step3Title": "Manage devices (optional)",
+      "step3Body": "See connected machines and revoke access anytime under Settings.",
+      "step3Cta": "Open Settings",
+      "step4Title": "Sync your sessions",
+      "step4Body": "Scan local AI tool logs and upload metadata — run again anytime."
+    },
+    "features": {
+      "eyebrow": "What you get",
+      "title": "A team dashboard built from local session metadata",
+      "toolsTitle": "Tools & models",
+      "toolsBody": "See which coding agents (Cursor, Claude Code, OpenClaw) and models each session used.",
+      "tokensTitle": "Tokens & activity",
+      "tokensBody": "Track token usage, session counts, active time, and trends over time — by team or member.",
+      "memberTitle": "Member activity",
+      "memberBody": "Per-person views: who was active, what they worked on, and how agents split their day.",
+      "summariesTitle": "Daily summaries",
+      "summariesBody": "AI-generated recaps for each member and the whole team — focused on what shipped, not token counts.",
+      "historyTitle": "Session history",
+      "historyBody": "Browse synced sessions with project, agent, model, and a short summary per session.",
+      "privacyTitle": "Privacy by design",
+      "privacyBody": "Only derived metadata and summaries are uploaded — never full transcripts, prompts, or code."
+    },
+    "cta": {
+      "title": "Ready to make AI work visible?",
+      "bodyUser": "Run devpulse login on your machine to connect, then devpulse sync to upload sessions.",
+      "bodyGuest": "Start with a free account. The CLI connects after your team is set up.",
+      "settings": "Settings",
+      "viewDashboard": "View dashboard",
+      "getStartedFree": "Get started free"
+    },
+    "footer": {
+      "tagline": "Lightweight AI work intelligence for small teams"
+    }
+  }
+}

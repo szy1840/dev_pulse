@@ -1,0 +1,25 @@
+{
+  "onboarding": {
+    "page": {
+      "backToDashboard": "返回仪表盘"
+    },
+    "form": {
+      "title": "设置你的团队",
+      "subtitle": "创建一个新团队，或使用邀请码加入现有团队。",
+      "createTab": "创建团队",
+      "joinTab": "加入团队",
+      "teamNameLabel": "团队名称",
+      "teamNamePlaceholder": "Acme 工程团队",
+      "createTeam": "创建团队",
+      "creating": "正在创建…",
+      "inviteCodeLabel": "邀请码",
+      "joinTeam": "加入团队",
+      "joining": "正在加入…"
+    },
+    "cli": {
+      "title": "连接 CLI",
+      "description": "团队 <strong>{teamName}</strong> 已就绪。在你的机器上运行以下命令即可开始同步 AI 使用数据。",
+      "skipForNow": "暂时跳过"
+    }
+  }
+}

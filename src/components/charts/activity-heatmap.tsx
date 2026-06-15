@@ -1,12 +1,15 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const HOUR_TICKS = [0, 6, 12, 18, 23];
 
 /** GitHub-style weekday×hour heatmap. `grid[day][hour]` = session count. */
 export function ActivityHeatmap({ grid, max }: { grid: number[][]; max: number }) {
+  const t = useTranslations("charts");
   if (max === 0) {
-    return <p className="py-10 text-center text-sm text-muted-foreground">No activity yet.</p>;
+    return <p className="py-10 text-center text-sm text-muted-foreground">{t("empty.noActivity")}</p>;
   }
 
   const intensity = (v: number) => {
@@ -28,7 +31,11 @@ export function ActivityHeatmap({ grid, max }: { grid: number[][]; max: number }
               {row.map((v, hour) => (
                 <div
                   key={hour}
-                  title={`${DAYS[day]} ${String(hour).padStart(2, "0")}:00 — ${v} session${v === 1 ? "" : "s"}`}
+                  title={t("heatmap.cellTitle", {
+                    day: DAYS[day],
+                    hour: String(hour).padStart(2, "0"),
+                    count: v,
+                  })}
                   className="aspect-square flex-1 rounded-[3px] transition-transform hover:scale-125"
                   style={{ background: bg[intensity(v)] }}
                 />
@@ -46,11 +53,11 @@ export function ActivityHeatmap({ grid, max }: { grid: number[][]; max: number }
       </div>
 
       <div className="flex items-center justify-end gap-1.5 text-[10px] text-muted-foreground">
-        <span>Less</span>
+        <span>{t("heatmap.less")}</span>
         {bg.map((c, i) => (
           <span key={i} className="h-3 w-3 rounded-[3px]" style={{ background: c }} />
         ))}
-        <span>More</span>
+        <span>{t("heatmap.more")}</span>
       </div>
     </div>
   );

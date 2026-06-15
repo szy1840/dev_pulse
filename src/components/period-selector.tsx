@@ -2,15 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const views: { value: string; label: string }[] = [
-  { value: "day", label: "Day" },
-  { value: "week", label: "Week" },
-  { value: "month", label: "Month" },
-  { value: "all", label: "All time" },
-];
+const views = ["day", "week", "month", "all"] as const;
 
 /**
  * Calendar-period navigation: granularity tabs plus prev/next arrows over the
@@ -33,6 +29,7 @@ export function PeriodSelector({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const t = useTranslations("period");
   const [isPending, startTransition] = useTransition();
   // Optimistic granularity: highlight the clicked tab instantly instead of
   // waiting for the server round-trip to update the `view` prop.
@@ -67,14 +64,14 @@ export function PeriodSelector({
           <button
             onClick={() => prevAnchor && navigate(view, prevAnchor)}
             disabled={!prevAnchor}
-            aria-label="Previous period"
+            aria-label={t("previous")}
             className="rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <button
             onClick={() => navigate(view)}
-            title={isCurrent ? undefined : "Jump to current"}
+            title={isCurrent ? undefined : t("jumpToCurrent")}
             className={cn(
               "min-w-[8rem] px-1 text-center text-sm font-medium tabular-nums",
               isCurrent ? "cursor-default" : "hover:text-foreground text-foreground/80"
@@ -85,7 +82,7 @@ export function PeriodSelector({
           <button
             onClick={() => nextAnchor && navigate(view, nextAnchor)}
             disabled={!nextAnchor}
-            aria-label="Next period"
+            aria-label={t("next")}
             className="rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30"
           >
             <ChevronRight className="h-4 w-4" />
@@ -96,16 +93,16 @@ export function PeriodSelector({
       <div className="inline-flex rounded-lg border p-0.5">
         {views.map((opt) => (
           <button
-            key={opt.value}
-            onClick={() => navigate(opt.value)}
+            key={opt}
+            onClick={() => navigate(opt)}
             className={cn(
               "rounded-md px-3 py-1 text-sm font-medium transition-colors",
-              activeView === opt.value
+              activeView === opt
                 ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
-            {opt.label}
+            {t(opt)}
           </button>
         ))}
       </div>

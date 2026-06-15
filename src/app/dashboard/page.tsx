@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { getTranslations } from "next-intl/server";
 import { Activity, Clock, Cpu, Layers, Users, Wrench, FolderGit2 } from "lucide-react";
 import { requireUserId, getActiveTeam, getViewerTimezone } from "@/lib/auth";
 import {
@@ -27,16 +28,19 @@ import { TeamSummarySection } from "@/components/team-summary-section";
 import { SummaryCardSkeleton } from "@/components/dashboard-skeletons";
 import { CommitCosts } from "@/components/commit-costs";
 
-function summaryHeading(range: PeriodRange): string {
+function summaryHeading(
+  range: PeriodRange,
+  t: Awaited<ReturnType<typeof getTranslations<"dashboard">>>
+): string {
   switch (range.view) {
     case "day":
-      return range.isCurrent ? "Today's team summary" : "Daily team summary";
+      return range.isCurrent ? t("summaryHeading.dayCurrent") : t("summaryHeading.day");
     case "week":
-      return range.isCurrent ? "This week's team summary" : "Weekly team summary";
+      return range.isCurrent ? t("summaryHeading.weekCurrent") : t("summaryHeading.week");
     case "month":
-      return range.isCurrent ? "This month's team summary" : "Monthly team summary";
+      return range.isCurrent ? t("summaryHeading.monthCurrent") : t("summaryHeading.month");
     case "all":
-      return "All-time team summary";
+      return t("summaryHeading.all");
   }
 }
 
@@ -48,6 +52,8 @@ export default async function OverviewPage({
   const userId = await requireUserId();
   const team = await getActiveTeam(userId);
   if (!team) return null; // layout redirects to onboarding
+
+  const t = await getTranslations("dashboard");
 
   const params = await searchParams;
   const timeZone = await getViewerTimezone(userId);
@@ -81,10 +87,10 @@ export default async function OverviewPage({
   const projectItems = projects.slice(0, 7).map((p) => ({ name: p.project, value: p.sessions, sub: p.tokens }));
 
   const tokenSegments = [
-    { label: "Input", value: stats.inputTokens, color: "hsl(var(--chart-1))" },
-    { label: "Output", value: stats.outputTokens, color: "hsl(var(--chart-2))" },
-    { label: "Cache read", value: stats.cacheReadTokens, color: "hsl(var(--chart-4))" },
-    { label: "Cache write", value: stats.cacheCreationTokens, color: "hsl(var(--chart-5))" },
+    { label: t("tokenSegments.input"), value: stats.inputTokens, color: "hsl(var(--chart-1))" },
+    { label: t("tokenSegments.output"), value: stats.outputTokens, color: "hsl(var(--chart-2))" },
+    { label: t("tokenSegments.cacheRead"), value: stats.cacheReadTokens, color: "hsl(var(--chart-4))" },
+    { label: t("tokenSegments.cacheWrite"), value: stats.cacheCreationTokens, color: "hsl(var(--chart-5))" },
   ];
 
   return (
@@ -92,7 +98,7 @@ export default async function OverviewPage({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">{team.name}</h1>
-          <p className="text-sm text-muted-foreground">Team AI usage overview</p>
+          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
         <PeriodSelector
           view={range.view}
@@ -109,7 +115,7 @@ export default async function OverviewPage({
           teamName={team.name}
           range={range}
           timeZone={timeZone}
-          heading={summaryHeading(range)}
+          heading={summaryHeading(range, t)}
           periodLabel={range.label}
           timezoneLabel={range.view === "all" ? undefined : formatTimezoneLabel(timeZone)}
           sessionCount={stats.sessionCount}
@@ -120,18 +126,18 @@ export default async function OverviewPage({
       {/* Headline stats with sparklines */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Sessions"
+          label={t("stats.sessions")}
           value={formatNumber(stats.sessionCount)}
-          hint={`${formatNumber(stats.messageCount)} messages`}
+          hint={t("stats.sessionsHint", { count: formatNumber(stats.messageCount) })}
           icon={<Activity className="h-5 w-5" />}
           accent={3}
           chart={<Sparkline data={sessionSpark} accent={3} />}
           delta={deltaFor(stats.sessionCount, prevStats?.sessionCount)}
         />
         <StatCard
-          label="Total tokens"
+          label={t("stats.totalTokens")}
           value={formatCompact(totalTokens)}
-          hint={`${formatCompact(stats.outputTokens)} generated`}
+          hint={t("stats.totalTokensHint", { count: formatCompact(stats.outputTokens) })}
           icon={<Layers className="h-5 w-5" />}
           accent={0}
           chart={<Sparkline data={tokenSpark} accent={0} />}
@@ -141,15 +147,15 @@ export default async function OverviewPage({
           )}
         />
         <StatCard
-          label="Active members"
+          label={t("stats.activeMembers")}
           value={formatNumber(stats.activeMembers)}
-          hint="synced in this period"
+          hint={t("stats.activeMembersHint")}
           icon={<Users className="h-5 w-5" />}
           accent={2}
           delta={deltaFor(stats.activeMembers, prevStats?.activeMembers)}
         />
         <StatCard
-          label="Active time"
+          label={t("stats.activeTime")}
           value={formatDuration(stats.activeMs)}
           hint={formatActivityHint(stats.peakConcurrency, stats.parallelFactor)}
           icon={<Clock className="h-5 w-5" />}
@@ -160,11 +166,11 @@ export default async function OverviewPage({
 
       {/* Activity trend */}
       <ChartCard
-        title="Activity over time"
+        title={t("charts.activityTitle")}
         description={
           range.view === "day"
-            ? "Hourly tokens and sessions — team total or split by member"
-            : "Daily tokens and sessions — team total or split by member"
+            ? t("charts.activityDescHourly")
+            : t("charts.activityDescDaily")
         }
         icon={<Activity className="h-4 w-4" />}
       >
@@ -178,16 +184,16 @@ export default async function OverviewPage({
       {/* Models + token composition */}
       <div className="grid gap-4 lg:grid-cols-2">
         <ChartCard
-          title="Models"
-          description="Session share by model"
+          title={t("charts.modelsTitle")}
+          description={t("charts.modelsDesc")}
           icon={<Cpu className="h-4 w-4" />}
         >
-          <DonutChart data={modelSlices} centerLabel="sessions" />
+          <DonutChart data={modelSlices} centerLabel={t("charts.modelsCenterLabel")} />
         </ChartCard>
 
         <ChartCard
-          title="Token composition"
-          description="Where this period's tokens went"
+          title={t("charts.tokenCompositionTitle")}
+          description={t("charts.tokenCompositionDesc")}
           icon={<Layers className="h-4 w-4" />}
         >
           <TokenCompositionBar segments={tokenSegments} />
@@ -197,19 +203,19 @@ export default async function OverviewPage({
       {/* Tools + projects */}
       <div className="grid gap-4 lg:grid-cols-2">
         <ChartCard
-          title="Tools"
-          description="Which AI coding tools are in use"
+          title={t("charts.toolsTitle")}
+          description={t("charts.toolsDesc")}
           icon={<Wrench className="h-4 w-4" />}
         >
           <RadialChart data={toolItems} />
         </ChartCard>
 
         <ChartCard
-          title="Top projects"
-          description="Busiest projects by sessions"
+          title={t("charts.topProjectsTitle")}
+          description={t("charts.topProjectsDesc")}
           icon={<FolderGit2 className="h-4 w-4" />}
         >
-          <BarListChart data={projectItems} valueLabel="Sessions" subLabel="Tokens" height={Math.max(160, projectItems.length * 34)} />
+          <BarListChart data={projectItems} valueLabel={t("charts.topProjectsValueLabel")} subLabel={t("charts.topProjectsSubLabel")} height={Math.max(160, projectItems.length * 34)} />
         </ChartCard>
       </div>
 
@@ -222,8 +228,8 @@ export default async function OverviewPage({
 
       {/* Heatmap */}
       <ChartCard
-        title="When the team codes"
-        description="Sessions by weekday and hour — all team or one member"
+        title={t("charts.heatmapTitle")}
+        description={t("charts.heatmapDesc")}
         icon={<Clock className="h-4 w-4" />}
       >
         <ActivityHeatmapPanel team={heatmap.team} members={heatmap.members} />

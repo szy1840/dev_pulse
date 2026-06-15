@@ -12,6 +12,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { requireUserId, getActiveTeam, getViewerTimezone } from "@/lib/auth";
+import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 import {
   getTeamMemberProfile,
@@ -59,6 +60,7 @@ export default async function MemberDetailPage({
   const team = await getActiveTeam(userId);
   if (!team) return null;
 
+  const t = await getTranslations("members");
   const { memberId } = await params;
   const member = await getTeamMemberProfile(team.id, memberId);
   if (!member) notFound();
@@ -81,7 +83,7 @@ export default async function MemberDetailPage({
       getRecentSessions(team.id, range, 500, memberId),
     ]);
 
-  const memberName = member.name ?? "Member";
+  const memberName = member.name ?? t("memberFallback");
 
   const totalTokens = stats.inputTokens + stats.outputTokens;
   const deltaWord = previousPeriodWord(range.view);
@@ -106,7 +108,7 @@ export default async function MemberDetailPage({
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
-        All members
+        {t("detail.allMembers")}
       </Link>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -115,12 +117,12 @@ export default async function MemberDetailPage({
           <div className="min-w-0">
             <h1 className="flex items-center gap-2 text-xl font-semibold">
               <span className="truncate">{memberName}</span>
-              {member.role === "owner" && <Badge variant="secondary">Owner</Badge>}
-              {member.userId === userId && <Badge variant="outline">You</Badge>}
+              {member.role === "owner" && <Badge variant="secondary">{t("owner")}</Badge>}
+              {member.userId === userId && <Badge variant="outline">{t("you")}</Badge>}
             </h1>
             <p className="truncate text-sm text-muted-foreground">
               {member.email}
-              {" · "}joined {format(member.joinedAt, "MMM d, yyyy")}
+              {" · "}{t("detail.joined", { date: format(member.joinedAt, "MMM d, yyyy") })}
             </p>
           </div>
         </div>
@@ -147,18 +149,18 @@ export default async function MemberDetailPage({
       {/* Headline stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Sessions"
+          label={t("stats.sessions")}
           value={formatNumber(stats.sessionCount)}
-          hint={`${formatNumber(stats.messageCount)} messages`}
+          hint={t("detail.messages", { count: formatNumber(stats.messageCount) })}
           icon={<Activity className="h-5 w-5" />}
           accent={3}
           chart={<Sparkline data={sessionSpark} accent={3} />}
           delta={deltaFor(stats.sessionCount, prevStats?.sessionCount)}
         />
         <StatCard
-          label="Total tokens"
+          label={t("stats.totalTokens")}
           value={formatCompact(totalTokens)}
-          hint={`${formatCompact(stats.outputTokens)} generated`}
+          hint={t("detail.generated", { count: formatCompact(stats.outputTokens) })}
           icon={<Layers className="h-5 w-5" />}
           accent={0}
           chart={<Sparkline data={tokenSpark} accent={0} />}
@@ -168,7 +170,7 @@ export default async function MemberDetailPage({
           )}
         />
         <StatCard
-          label="Active time"
+          label={t("stats.activeTime")}
           value={formatDuration(stats.activeMs)}
           hint={formatActivityHint(stats.peakConcurrency, stats.parallelFactor)}
           icon={<Clock className="h-5 w-5" />}
@@ -176,7 +178,7 @@ export default async function MemberDetailPage({
           delta={deltaFor(stats.activeMs, prevStats?.activeMs)}
         />
         <StatCard
-          label="Avg session"
+          label={t("stats.avgSession")}
           value={
             stats.sessionCount > 0
               ? formatDuration(stats.sessionEngagedMs / stats.sessionCount)
@@ -184,8 +186,8 @@ export default async function MemberDetailPage({
           }
           hint={
             stats.sessionCount > 0
-              ? `${formatCompact(Math.round(totalTokens / stats.sessionCount))} tokens each`
-              : "no sessions"
+              ? t("detail.tokensEach", { count: formatCompact(Math.round(totalTokens / stats.sessionCount)) })
+              : t("detail.noSessions")
           }
           icon={<MessageSquare className="h-5 w-5" />}
           accent={1}
@@ -194,11 +196,11 @@ export default async function MemberDetailPage({
 
       {/* Activity trend */}
       <ChartCard
-        title="Activity over time"
+        title={t("detail.activityOverTimeTitle")}
         description={
           granularity === "hour"
-            ? `Hourly tokens and sessions for ${memberName}`
-            : `Daily tokens and sessions for ${memberName}`
+            ? t("detail.activityOverTimeHourly", { name: memberName })
+            : t("detail.activityOverTimeDaily", { name: memberName })
         }
         icon={<Activity className="h-4 w-4" />}
       >
@@ -207,30 +209,30 @@ export default async function MemberDetailPage({
 
       {/* Breakdowns */}
       <div className="grid gap-4 lg:grid-cols-2">
-        <ChartCard title="Models" description="Session share by model" icon={<Cpu className="h-4 w-4" />}>
-          <DonutChart data={modelSlices} centerLabel="sessions" />
+        <ChartCard title={t("detail.modelsTitle")} description={t("detail.modelsDescription")} icon={<Cpu className="h-4 w-4" />}>
+          <DonutChart data={modelSlices} centerLabel={t("detail.modelsCenterLabel")} />
         </ChartCard>
-        <ChartCard title="Agents" description="Sessions per AI coding tool" icon={<Wrench className="h-4 w-4" />}>
+        <ChartCard title={t("detail.agentsTitle")} description={t("detail.agentsDescription")} icon={<Wrench className="h-4 w-4" />}>
           <RadialChart data={toolItems} />
         </ChartCard>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <ChartCard
-          title="Top projects"
-          description="Busiest projects by sessions"
+          title={t("detail.topProjectsTitle")}
+          description={t("detail.topProjectsDescription")}
           icon={<FolderGit2 className="h-4 w-4" />}
         >
           <BarListChart
             data={projectItems}
-            valueLabel="Sessions"
-            subLabel="Tokens"
+            valueLabel={t("detail.projectsValueLabel")}
+            subLabel={t("detail.projectsSubLabel")}
             height={Math.max(160, projectItems.length * 34)}
           />
         </ChartCard>
         <ChartCard
-          title="When they code"
-          description="Sessions by weekday and hour"
+          title={t("detail.whenTheyCodeTitle")}
+          description={t("detail.whenTheyCodeDescription")}
           icon={<Clock className="h-4 w-4" />}
         >
           <ActivityHeatmap grid={heatmap.grid} max={heatmap.max} />
@@ -240,8 +242,8 @@ export default async function MemberDetailPage({
       {/* Sessions */}
       <div className="space-y-3">
         <div>
-          <h2 className="text-base font-semibold">Sessions</h2>
-          <p className="text-sm text-muted-foreground">{memberName}&apos;s sessions in this period</p>
+          <h2 className="text-base font-semibold">{t("detail.sessionsHeading")}</h2>
+          <p className="text-sm text-muted-foreground">{t("detail.sessionsSubheading", { name: memberName })}</p>
         </div>
         <SessionsExplorer sessions={sessions} showMember={false} />
       </div>

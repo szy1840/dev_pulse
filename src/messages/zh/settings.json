@@ -1,0 +1,113 @@
+{
+  "settings": {
+    "title": "设置",
+    "subtitle": "<strong>{team}</strong> 的工作区与个人设置。",
+    "nav": {
+      "workspace": "工作区",
+      "personal": "个人",
+      "general": "常规",
+      "members": "成员",
+      "invites": "邀请",
+      "cli": "CLI 设置",
+      "devices": "设备",
+      "timezone": "时区",
+      "language": "语言",
+      "ariaLabel": "设置分区"
+    },
+    "sections": {
+      "generalTitle": "常规",
+      "generalDescription": "团队在整个仪表盘中显示的名称。",
+      "membersTitle": "团队成员",
+      "membersDescription": "本团队共有 {count} 名成员。移除成员仅会撤销其访问权限——已同步的会话仍保留在团队历史中。",
+      "invitesTitle": "邀请队友",
+      "invitesDescription": "任何持有此邀请码的人都可以加入团队。",
+      "cliTitle": "连接 CLI",
+      "devicesTitle": "已连接设备",
+      "devicesDescriptionEmpty": "在某台机器上运行 devpulse login 后，设备会显示在这里。",
+      "devicesDescriptionActive": "{count} 台活跃设备可为本团队同步会话。",
+      "devicesDescriptionSuffix": "如果笔记本电脑丢失或更换，请撤销其访问权限。",
+      "timezoneTitle": "时区",
+      "timezoneDescription": "当前使用 {tz}（{label}）作为每日摘要和\"今天\"筛选的时区。"
+    },
+    "cliSectionDescription": "在每台开发者机器上运行这些命令。<code>devpulse login</code> 会打开浏览器进行授权——无需手动管理令牌。",
+    "general": {
+      "teamName": "团队名称",
+      "renameRestricted": "只有团队所有者才能重命名团队。",
+      "saved": "已保存",
+      "saving": "保存中…",
+      "save": "保存",
+      "helper": "显示在团队切换器和每个仪表盘页面上。"
+    },
+    "members": {
+      "memberFallback": "成员",
+      "thisMemberFallback": "该成员",
+      "owner": "所有者",
+      "admin": "管理员",
+      "you": "你",
+      "noEmail": "无邮箱",
+      "joined": "加入于 {date}",
+      "remove": "移除",
+      "removeConfirm": "将 {name} 从团队中移除？其已同步的会话仍保留在团队历史中，但将失去访问权限及本团队的 CLI 同步功能。",
+      "removeConfirmLabel": "移除成员",
+      "leaveConfirmThis": "退出此团队？你过往的会话仍保留在团队历史中。你可以凭邀请码重新加入。",
+      "leaveConfirmThe": "退出团队？你过往的会话仍保留在团队历史中。你可以凭邀请码重新加入。",
+      "leaveConfirmLabel": "退出团队",
+      "leaveDescription": "停止向本团队同步，并将自己从成员名单中移除。",
+      "leave": "退出团队",
+      "onlyOwnerNote": "作为唯一的所有者，在添加其他所有者之前你无法退出。",
+      "cancel": "取消"
+    },
+    "invites": {
+      "share": "分享此邀请码，队友即可从引导页面加入 <strong>{team}</strong>。",
+      "copied": "已复制",
+      "copy": "复制",
+      "regenerate": "重新生成",
+      "regenerateConfirm": "生成新的邀请码？当前邀请码将立即失效——已分享给的所有人都需要使用新邀请码。现有成员不受影响。",
+      "regenerating": "生成中…",
+      "regenerateConfirmLabel": "重新生成邀请码",
+      "cancel": "取消"
+    },
+    "devices": {
+      "emptyTitle": "尚未连接任何设备",
+      "emptyBody": "在你的机器上运行 <code>devpulse login</code>——浏览器将打开以授权这台电脑。",
+      "noActive": "暂无活跃设备。",
+      "revoked": "已撤销",
+      "connected": "连接于 {date}",
+      "lastSync": " · 上次同步 {date}",
+      "neverSynced": " · 从未同步",
+      "revokeAria": "撤销 {name}"
+    },
+    "cli": {
+      "openclawPrompt": "Set up DevPulse CLI on this machine (Node.js 22+):\n\nnpm install -g devpulse-ai\ndevpulse login\ndevpulse sync\n\nRun in order. devpulse login opens a browser to authorize — complete it (ask me if needed). Then run devpulse status and report the result.",
+      "step1Title": "安装 CLI",
+      "step1Body": "需要 Node.js 22+。每台机器只需运行一次。",
+      "step2Title": "在这台机器上登录",
+      "step2Body": "打开浏览器以授权 CLI——类似于 Claude Code 的设备登录。",
+      "step3Title": "同步你的使用数据",
+      "step3Body": "扫描本地 AI 工具日志并上传使用元数据——令牌、活动、摘要等。可随时再次运行。",
+      "copy": "复制",
+      "copied": "已复制",
+      "compactNote": "随时使用 <code>devpulse status</code> 检查配置。仅上传使用元数据——绝不上传代码或对话记录。",
+      "connectTitle": "连接你的机器即可在此查看数据",
+      "connectBody": "在你安装 CLI 并在笔记本上运行 <code>devpulse sync</code> 后，仪表盘将填充数据。仅上传轻量的使用元数据——绝不上传代码或对话记录。",
+      "openclawTitle": "复制此提示词，让 OpenClaw 自动完成设置",
+      "openclawBody": "适用于 OpenClaw，它可以替你完成浏览器登录。沙箱化的智能体（例如基于云端的）无法做到——请改用手动步骤。",
+      "manualTitle": "手动设置",
+      "afterSync": "同步完成后，刷新仪表盘即可查看你的数据。",
+      "openDashboard": "打开仪表盘"
+    },
+    "timezone": {
+      "label": "时区",
+      "common": "常用",
+      "all": "全部",
+      "helper": "仪表盘的\"今天\"摘要和统计以该时区的午夜为准。",
+      "useBrowser": "使用浏览器时区（{tz}）"
+    },
+    "banner": {
+      "title": "尚无使用数据——在你的机器上连接 CLI",
+      "body": "使用 <install></install> 安装，然后运行 <login></login> 和 <sync></sync>。",
+      "setupGuide": "设置指南",
+      "dismiss": "关闭"
+    }
+  }
+}

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { Check, ChevronsUpDown, Plus } from "lucide-react";
 import {
   DropdownMenu,
@@ -24,6 +25,7 @@ export function TeamSwitcher({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const tr = useTranslations("teamSwitcher");
   const active = teams.find((t) => t.id === activeTeamId);
 
   function select(teamId: string) {
@@ -38,7 +40,7 @@ export function TeamSwitcher({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" disabled={pending} className="gap-2">
-          {active?.name ?? "Select team"}
+          {active?.name ?? tr("selectTeam")}
           <ChevronsUpDown className="h-3.5 w-3.5 opacity-60" />
         </Button>
       </DropdownMenuTrigger>
@@ -51,7 +53,7 @@ export function TeamSwitcher({
         ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => router.push("/onboarding")}>
-          <Plus className="mr-2 h-4 w-4" /> Create or join team
+          <Plus className="mr-2 h-4 w-4" /> {tr("createOrJoin")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -2,17 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 const links = [
-  { href: "/dashboard", label: "Overview" },
-  { href: "/dashboard/sessions", label: "Sessions" },
-  { href: "/dashboard/members", label: "Members" },
-  { href: "/dashboard/settings", label: "Settings" },
-];
+  { href: "/dashboard", key: "overview" },
+  { href: "/dashboard/sessions", key: "sessions" },
+  { href: "/dashboard/members", key: "members" },
+  { href: "/dashboard/settings", key: "settings" },
+] as const;
 
 export function DashboardNav() {
   const pathname = usePathname();
+  const t = useTranslations("nav");
   return (
     <nav className="flex gap-1 px-4 sm:px-6">
       {links.map((link) => {
@@ -31,7 +33,7 @@ export function DashboardNav() {
                 : "border-transparent text-muted-foreground hover:text-foreground"
             )}
           >
-            {link.label}
+            {t(link.key)}
           </Link>
         );
       })}

@@ -1,0 +1,76 @@
+{
+  "members": {
+    "title": "成员",
+    "summary": "{count} 名成员 · 本期 {active} 名活跃",
+    "memberFallback": "成员",
+    "thisMemberFallback": "该成员",
+    "owner": "所有者",
+    "you": "你",
+    "noActivity": "暂无活动",
+    "activeAgo": "活跃于 {time}",
+    "viewProfile": "查看 {name} 的资料",
+    "agents": "智能体：",
+    "stats": {
+      "sessions": "会话",
+      "tokens": "Token",
+      "activeTime": "活跃时长",
+      "peakConcurrent": "峰值并发",
+      "totalTokens": "Token 总量",
+      "avgSession": "平均会话",
+      "lastActive": "最近活跃"
+    },
+    "noSessionsInPeriod": "{name} 本期没有 AI 编程会话。",
+    "charts": {
+      "tokenShareTitle": "Token 占比",
+      "tokenShareDescription": "团队的 Token 消耗分布",
+      "tokensCenterLabel": "Token",
+      "activeTimeByMemberTitle": "各成员活跃时长",
+      "activeTimeByMemberDescription": "谁在 AI 会话中投入的时间最多",
+      "activeTimeValueLabel": "活跃时长"
+    },
+    "table": {
+      "member": "成员"
+    },
+    "leaderboard": {
+      "title": "排行榜",
+      "subtitle": "按会话数排名的贡献者 · {period}",
+      "member": "成员",
+      "sessions": "会话",
+      "tokens": "Token",
+      "active": "活跃",
+      "sessSuffix": "次"
+    },
+    "detail": {
+      "allMembers": "全部成员",
+      "joined": "加入于 {date}",
+      "messages": "{count} 条消息",
+      "generated": "已生成 {count}",
+      "noSessions": "暂无会话",
+      "tokensEach": "每次 {count} Token",
+      "activityOverTimeTitle": "活动趋势",
+      "activityOverTimeHourly": "{name} 的每小时 Token 与会话数",
+      "activityOverTimeDaily": "{name} 的每日 Token 与会话数",
+      "modelsTitle": "模型",
+      "modelsDescription": "各模型的会话占比",
+      "modelsCenterLabel": "会话",
+      "agentsTitle": "智能体",
+      "agentsDescription": "各 AI 编程工具的会话数",
+      "topProjectsTitle": "热门项目",
+      "topProjectsDescription": "按会话数排名最活跃的项目",
+      "projectsValueLabel": "会话",
+      "projectsSubLabel": "Token",
+      "whenTheyCodeTitle": "编程时段",
+      "whenTheyCodeDescription": "按星期与小时分布的会话",
+      "sessionsHeading": "会话",
+      "sessionsSubheading": "{name} 本期的会话"
+    },
+    "today": {
+      "defaultPeriod": "今天",
+      "periodPrefix": "{period}："
+    },
+    "notFound": {
+      "message": "该成员不在当前团队中，或链接已失效。",
+      "back": "返回成员列表"
+    }
+  }
+}

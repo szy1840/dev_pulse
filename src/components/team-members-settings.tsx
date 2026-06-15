@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { format } from "date-fns";
 import { LogOut, UserMinus } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
@@ -29,6 +30,7 @@ export function TeamMembersSettings({
   viewerId: string;
   viewerRole: string;
 }) {
+  const t = useTranslations("settings");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [confirming, setConfirming] = useState<{ userId: string; action: "remove" | "leave" } | null>(
@@ -81,13 +83,14 @@ export function TeamMembersSettings({
                 <Avatar name={m.name} imageUrl={m.imageUrl} className="h-9 w-9" />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="truncate text-sm font-medium">{m.name ?? "Member"}</span>
-                    {m.role === "owner" && <Badge variant="secondary">Owner</Badge>}
-                    {m.role === "admin" && <Badge variant="secondary">Admin</Badge>}
-                    {isSelf && <Badge variant="outline">You</Badge>}
+                    <span className="truncate text-sm font-medium">{m.name ?? t("members.memberFallback")}</span>
+                    {m.role === "owner" && <Badge variant="secondary">{t("members.owner")}</Badge>}
+                    {m.role === "admin" && <Badge variant="secondary">{t("members.admin")}</Badge>}
+                    {isSelf && <Badge variant="outline">{t("members.you")}</Badge>}
                   </div>
                   <p className="truncate text-xs text-muted-foreground">
-                    {m.email ?? "No email"} · joined {format(new Date(m.joinedAt), "MMM d, yyyy")}
+                    {m.email ?? t("members.noEmail")} ·{" "}
+                    {t("members.joined", { date: format(new Date(m.joinedAt), "MMM d, yyyy") })}
                   </p>
                 </div>
                 {showRemove && !isConfirmingRemove && (
@@ -98,15 +101,17 @@ export function TeamMembersSettings({
                     onClick={() => setConfirming({ userId: m.userId, action: "remove" })}
                   >
                     <UserMinus className="h-4 w-4" />
-                    Remove
+                    {t("members.remove")}
                   </Button>
                 )}
               </div>
 
               {isConfirmingRemove && (
                 <ConfirmPanel
-                  message={`Remove ${m.name ?? "this member"} from the team? Their synced sessions stay in team history, but they lose access and CLI sync for this team.`}
-                  confirmLabel="Remove member"
+                  message={t("members.removeConfirm", {
+                    name: m.name ?? t("members.thisMemberFallback"),
+                  })}
+                  confirmLabel={t("members.removeConfirmLabel")}
                   pending={pending}
                   onCancel={() => setConfirming(null)}
                   onConfirm={() => run("remove", m.userId)}
@@ -121,17 +126,15 @@ export function TeamMembersSettings({
         <div className="rounded-lg border border-dashed p-4">
           {confirming?.action === "leave" ? (
             <ConfirmPanel
-              message={`Leave ${members.length > 1 ? "this team" : "the team"}? Your past sessions remain in team history. You can rejoin with the invite code.`}
-              confirmLabel="Leave team"
+              message={members.length > 1 ? t("members.leaveConfirmThis") : t("members.leaveConfirmThe")}
+              confirmLabel={t("members.leaveConfirmLabel")}
               pending={pending}
               onCancel={() => setConfirming(null)}
               onConfirm={() => run("leave", viewerId)}
             />
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-muted-foreground">
-                Stop syncing to this team and remove yourself from the roster.
-              </p>
+              <p className="text-sm text-muted-foreground">{t("members.leaveDescription")}</p>
               <Button
                 variant="outline"
                 size="sm"
@@ -139,7 +142,7 @@ export function TeamMembersSettings({
                 onClick={() => setConfirming({ userId: viewerId, action: "leave" })}
               >
                 <LogOut className="h-4 w-4" />
-                Leave team
+                {t("members.leave")}
               </Button>
             </div>
           )}
@@ -147,9 +150,7 @@ export function TeamMembersSettings({
       )}
 
       {viewer?.role === "owner" && members.filter((m) => m.role === "owner").length === 1 && (
-        <p className="text-xs text-muted-foreground">
-          As the only owner, you cannot leave until another owner is added.
-        </p>
+        <p className="text-xs text-muted-foreground">{t("members.onlyOwnerNote")}</p>
       )}
 
       {error && <p className="text-sm text-destructive">{error}</p>}
@@ -170,6 +171,7 @@ function ConfirmPanel({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const t = useTranslations("settings");
   return (
     <div className="mt-3 space-y-3 rounded-md border bg-muted/40 p-3">
       <p className="text-sm text-muted-foreground">{message}</p>
@@ -178,7 +180,7 @@ function ConfirmPanel({
           {confirmLabel}
         </Button>
         <Button size="sm" variant="outline" disabled={pending} onClick={onCancel}>
-          Cancel
+          {t("members.cancel")}
         </Button>
       </div>
     </div>

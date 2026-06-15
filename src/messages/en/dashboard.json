@@ -1,0 +1,61 @@
+{
+  "dashboard": {
+    "subtitle": "Team AI usage overview",
+    "summaryHeading": {
+      "dayCurrent": "Today's team summary",
+      "day": "Daily team summary",
+      "weekCurrent": "This week's team summary",
+      "week": "Weekly team summary",
+      "monthCurrent": "This month's team summary",
+      "month": "Monthly team summary",
+      "all": "All-time team summary"
+    },
+    "summaryBadges": {
+      "sessions": "{count, plural, =1 {# session} other {# sessions}}",
+      "active": "{count} active"
+    },
+    "stats": {
+      "sessions": "Sessions",
+      "sessionsHint": "{count} messages",
+      "totalTokens": "Total tokens",
+      "totalTokensHint": "{count} generated",
+      "activeMembers": "Active members",
+      "activeMembersHint": "synced in this period",
+      "activeTime": "Active time"
+    },
+    "tokenSegments": {
+      "input": "Input",
+      "output": "Output",
+      "cacheRead": "Cache read",
+      "cacheWrite": "Cache write"
+    },
+    "charts": {
+      "activityTitle": "Activity over time",
+      "activityDescHourly": "Hourly tokens and sessions — team total or split by member",
+      "activityDescDaily": "Daily tokens and sessions — team total or split by member",
+      "modelsTitle": "Models",
+      "modelsDesc": "Session share by model",
+      "modelsCenterLabel": "sessions",
+      "tokenCompositionTitle": "Token composition",
+      "tokenCompositionDesc": "Where this period's tokens went",
+      "toolsTitle": "Tools",
+      "toolsDesc": "Which AI coding tools are in use",
+      "topProjectsTitle": "Top projects",
+      "topProjectsDesc": "Busiest projects by sessions",
+      "topProjectsValueLabel": "Sessions",
+      "topProjectsSubLabel": "Tokens",
+      "heatmapTitle": "When the team codes",
+      "heatmapDesc": "Sessions by weekday and hour — all team or one member"
+    },
+    "commitCosts": {
+      "title": "Commit costs",
+      "description": "AI spend attributed to shipped commits",
+      "attributedTooltip": "Share of span tokens matched to a commit",
+      "attributedBadge": "{pct}% attributed",
+      "empty": "No commits matched to AI work yet. Costs appear here once synced sessions overlap with local git commits.",
+      "tokUnit": "tok",
+      "footer": "{attributed} of {total} span tokens attributed",
+      "footerUnmatched": "{count, plural, =1 {# commit without matched AI work} other {# commits without matched AI work}}"
+    }
+  }
+}

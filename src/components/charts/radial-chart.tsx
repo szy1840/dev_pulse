@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   RadialBar,
   RadialBarChart,
@@ -13,8 +14,9 @@ import { ChartClientOnly } from "./chart-client-only";
 export type RadialItem = { name: string; value: number };
 
 export function RadialChart({ data }: { data: RadialItem[] }) {
+  const t = useTranslations("charts");
   if (data.length === 0) {
-    return <p className="py-10 text-center text-sm text-muted-foreground">No data yet.</p>;
+    return <p className="py-10 text-center text-sm text-muted-foreground">{t("empty.noData")}</p>;
   }
 
   const max = Math.max(...data.map((d) => d.value), 1);

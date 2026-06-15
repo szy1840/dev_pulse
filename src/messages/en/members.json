@@ -1,0 +1,76 @@
+{
+  "members": {
+    "title": "Members",
+    "summary": "{count, plural, =1 {# member} other {# members}} · {active} active in this period",
+    "memberFallback": "Member",
+    "thisMemberFallback": "This member",
+    "owner": "Owner",
+    "you": "You",
+    "noActivity": "No activity yet",
+    "activeAgo": "Active {time}",
+    "viewProfile": "View {name}'s profile",
+    "agents": "Agents:",
+    "stats": {
+      "sessions": "Sessions",
+      "tokens": "Tokens",
+      "activeTime": "Active time",
+      "peakConcurrent": "Peak concurrent",
+      "totalTokens": "Total tokens",
+      "avgSession": "Avg session",
+      "lastActive": "Last active"
+    },
+    "noSessionsInPeriod": "{name} had no AI coding sessions in this period.",
+    "charts": {
+      "tokenShareTitle": "Token share",
+      "tokenShareDescription": "Token consumption across the team",
+      "tokensCenterLabel": "tokens",
+      "activeTimeByMemberTitle": "Active time by member",
+      "activeTimeByMemberDescription": "Who spent the most time in AI sessions",
+      "activeTimeValueLabel": "Active time"
+    },
+    "table": {
+      "member": "Member"
+    },
+    "leaderboard": {
+      "title": "Leaderboard",
+      "subtitle": "Top contributors by sessions · {period}",
+      "member": "Member",
+      "sessions": "Sessions",
+      "tokens": "Tokens",
+      "active": "Active",
+      "sessSuffix": "sess"
+    },
+    "detail": {
+      "allMembers": "All members",
+      "joined": "joined {date}",
+      "messages": "{count} messages",
+      "generated": "{count} generated",
+      "noSessions": "no sessions",
+      "tokensEach": "{count} tokens each",
+      "activityOverTimeTitle": "Activity over time",
+      "activityOverTimeHourly": "Hourly tokens and sessions for {name}",
+      "activityOverTimeDaily": "Daily tokens and sessions for {name}",
+      "modelsTitle": "Models",
+      "modelsDescription": "Session share by model",
+      "modelsCenterLabel": "sessions",
+      "agentsTitle": "Agents",
+      "agentsDescription": "Sessions per AI coding tool",
+      "topProjectsTitle": "Top projects",
+      "topProjectsDescription": "Busiest projects by sessions",
+      "projectsValueLabel": "Sessions",
+      "projectsSubLabel": "Tokens",
+      "whenTheyCodeTitle": "When they code",
+      "whenTheyCodeDescription": "Sessions by weekday and hour",
+      "sessionsHeading": "Sessions",
+      "sessionsSubheading": "{name}'s sessions in this period"
+    },
+    "today": {
+      "defaultPeriod": "Today",
+      "periodPrefix": "{period}: "
+    },
+    "notFound": {
+      "message": "This member isn't on the current team, or the link is out of date.",
+      "back": "Back to members"
+    }
+  }
+}

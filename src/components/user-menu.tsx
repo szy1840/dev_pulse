@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { LogOut } from "lucide-react";
 import {
   DropdownMenu,
@@ -25,6 +26,7 @@ export function UserMenu({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const t = useTranslations("userMenu");
 
   function handleSignOut() {
     startTransition(async () => {
@@ -41,13 +43,13 @@ export function UserMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="flex flex-col">
-          <span className="truncate">{name ?? "Member"}</span>
+          <span className="truncate">{name ?? t("member")}</span>
           {email && <span className="truncate text-xs font-normal text-muted-foreground">{email}</span>}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleSignOut(); }} disabled={pending}>
           <LogOut className="mr-2 h-4 w-4" />
-          {pending ? "Signing out…" : "Sign out"}
+          {pending ? t("signingOut") : t("signOut")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

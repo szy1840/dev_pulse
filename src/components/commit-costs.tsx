@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { GitCommitHorizontal } from "lucide-react";
 import { ChartCard } from "@/components/charts/chart-card";
 import { Badge } from "@/components/ui/badge";
@@ -19,26 +20,26 @@ export function CommitCosts({
   coverage: AttributionCoverage;
   unmatchedCommitCount: number;
 }) {
+  const t = useTranslations("dashboard");
   const pct =
     coverage.coverageRatio === null ? null : Math.round(coverage.coverageRatio * 100);
 
   return (
     <ChartCard
-      title="Commit costs"
-      description="AI spend attributed to shipped commits"
+      title={t("commitCosts.title")}
+      description={t("commitCosts.description")}
       icon={<GitCommitHorizontal className="h-4 w-4" />}
       action={
         pct !== null ? (
-          <Badge variant="secondary" title="Share of span tokens matched to a commit">
-            {pct}% attributed
+          <Badge variant="secondary" title={t("commitCosts.attributedTooltip")}>
+            {t("commitCosts.attributedBadge", { pct })}
           </Badge>
         ) : undefined
       }
     >
       {commits.length === 0 ? (
         <p className="py-6 text-center text-sm text-muted-foreground">
-          No commits matched to AI work yet. Costs appear here once synced sessions
-          overlap with local git commits.
+          {t("commitCosts.empty")}
         </p>
       ) : (
         <div className="space-y-1">
@@ -68,7 +69,7 @@ export function CommitCosts({
               <div className="shrink-0 text-right">
                 <p className="text-sm font-semibold tabular-nums">
                   {formatCompact(c.inputTokens + c.outputTokens)}
-                  <span className="ml-1 text-xs font-normal text-muted-foreground">tok</span>
+                  <span className="ml-1 text-xs font-normal text-muted-foreground">{t("commitCosts.tokUnit")}</span>
                 </p>
                 <p className="text-xs text-muted-foreground tabular-nums">
                   {formatDuration(c.workMs)}
@@ -77,9 +78,11 @@ export function CommitCosts({
             </div>
           ))}
           <p className="px-2 pt-2 text-xs text-muted-foreground">
-            {formatCompact(coverage.attributedSpanTokens)} of{" "}
-            {formatCompact(coverage.totalSpanTokens)} span tokens attributed
-            {unmatchedCommitCount > 0 && <> · {unmatchedCommitCount} commits without matched AI work</>}
+            {t("commitCosts.footer", {
+              attributed: formatCompact(coverage.attributedSpanTokens),
+              total: formatCompact(coverage.totalSpanTokens),
+            })}
+            {unmatchedCommitCount > 0 && <> · {t("commitCosts.footerUnmatched", { count: unmatchedCommitCount })}</>}
           </p>
         </div>
       )}

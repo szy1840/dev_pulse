@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Area,
   AreaChart,
@@ -91,6 +92,7 @@ export function ActivityTrendChart({
   memberSeries?: MemberSeries[];
   granularity?: "day" | "hour";
 }) {
+  const t = useTranslations("charts");
   const [metric, setMetric] = useState<Metric>("tokens");
   const [view, setView] = useState<View>("team");
   const tickStep = Math.max(1, Math.ceil(teamData.length / 8));
@@ -121,10 +123,15 @@ export function ActivityTrendChart({
             options={["team", "members"] as View[]}
             value={view}
             onChange={setView}
-            labels={{ team: "Team", members: "By member" }}
+            labels={{ team: t("trend.team"), members: t("trend.byMember") }}
           />
         )}
-        <ToggleGroup options={["tokens", "sessions"] as Metric[]} value={metric} onChange={setMetric} />
+        <ToggleGroup
+          options={["tokens", "sessions"] as Metric[]}
+          value={metric}
+          onChange={setMetric}
+          labels={{ tokens: t("trend.tokens"), sessions: t("trend.sessions") }}
+        />
       </div>
 
       <ChartSize height={260}>
@@ -161,13 +168,13 @@ export function ActivityTrendChart({
                 const rows =
                   metric === "tokens"
                     ? [
-                        { label: "Input", value: formatNumber(p.inputTokens), color: "hsl(var(--chart-1))" },
-                        { label: "Output", value: formatNumber(p.outputTokens), color: "hsl(var(--chart-2))" },
-                        { label: "Sessions", value: formatNumber(p.sessions) },
+                        { label: t("trend.input"), value: formatNumber(p.inputTokens), color: "hsl(var(--chart-1))" },
+                        { label: t("trend.output"), value: formatNumber(p.outputTokens), color: "hsl(var(--chart-2))" },
+                        { label: t("trend.sessions"), value: formatNumber(p.sessions) },
                       ]
                     : [
-                        { label: "Sessions", value: formatNumber(p.sessions), color: "hsl(var(--chart-4))" },
-                        { label: "Tokens", value: formatNumber(p.tokens) },
+                        { label: t("trend.sessions"), value: formatNumber(p.sessions), color: "hsl(var(--chart-4))" },
+                        { label: t("trend.tokens"), value: formatNumber(p.tokens) },
                       ];
                 return <TooltipCard title={formatBucketTitle(String(label), granularity)} rows={rows} />;
               }}

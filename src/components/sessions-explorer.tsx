@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { formatDistanceToNow, format } from "date-fns";
 import {
   ArrowDown,
@@ -183,6 +184,7 @@ export function SessionsExplorer({
   sessions: ExplorerSession[];
   showMember?: boolean;
 }) {
+  const t = useTranslations("sessions");
   const [query, setQuery] = useState("");
   const [member, setMember] = useState(ALL);
   const [tool, setTool] = useState(ALL);
@@ -287,8 +289,9 @@ export function SessionsExplorer({
     return (
       <Card>
         <CardContent className="py-12 text-center text-sm text-muted-foreground">
-          No sessions in this period. Run{" "}
-          <code className="rounded bg-muted px-1">devpulse sync</code> to upload.
+          {t.rich("emptyPeriod", {
+            code: () => <code className="rounded bg-muted px-1">devpulse sync</code>,
+          })}
         </CardContent>
       </Card>
     );
@@ -307,7 +310,7 @@ export function SessionsExplorer({
                 setQuery(e.target.value);
                 setPage(0);
               }}
-              placeholder="Search summaries, projects, models…"
+              placeholder={t("searchPlaceholder")}
               className="h-9 pl-8"
             />
           </div>
@@ -316,35 +319,35 @@ export function SessionsExplorer({
               value={member}
               onChange={withReset(setMember)}
               options={facets.members}
-              allLabel="All members"
-              ariaLabel="Filter by member"
+              allLabel={t("allMembers")}
+              ariaLabel={t("filterByMember")}
             />
           )}
           <FilterSelect
             value={tool}
             onChange={withReset(setTool)}
             options={facets.tools}
-            allLabel="All agents"
-            ariaLabel="Filter by agent"
+            allLabel={t("allAgents")}
+            ariaLabel={t("filterByAgent")}
           />
           <FilterSelect
             value={model}
             onChange={withReset(setModel)}
             options={facets.models}
-            allLabel="All models"
-            ariaLabel="Filter by model"
+            allLabel={t("allModels")}
+            ariaLabel={t("filterByModel")}
           />
           <FilterSelect
             value={project}
             onChange={withReset(setProject)}
             options={facets.projects}
-            allLabel="All projects"
-            ariaLabel="Filter by project"
+            allLabel={t("allProjects")}
+            ariaLabel={t("filterByProject")}
           />
           {hasFilters && (
             <Button variant="ghost" size="sm" onClick={resetFilters} className="h-9 gap-1 px-2">
               <X className="h-3.5 w-3.5" />
-              Clear
+              {t("clear")}
             </Button>
           )}
           <div className="ml-auto flex items-center gap-2">
@@ -352,7 +355,7 @@ export function SessionsExplorer({
               <button
                 type="button"
                 onClick={() => setView("table")}
-                aria-label="Table view"
+                aria-label={t("tableView")}
                 className={cn(
                   "rounded-md p-1.5 transition-colors",
                   view === "table"
@@ -365,7 +368,7 @@ export function SessionsExplorer({
               <button
                 type="button"
                 onClick={() => setView("cards")}
-                aria-label="Card view"
+                aria-label={t("cardView")}
                 className={cn(
                   "rounded-md p-1.5 transition-colors",
                   view === "cards"
@@ -391,26 +394,26 @@ export function SessionsExplorer({
         {/* Results */}
         {filtered.length === 0 ? (
           <div className="py-12 text-center text-sm text-muted-foreground">
-            No sessions match the current filters.
+            {t("noMatch")}
             <button
               type="button"
               onClick={resetFilters}
               className="ml-1.5 font-medium text-foreground underline-offset-2 hover:underline"
             >
-              Clear filters
+              {t("clearFilters")}
             </button>
           </div>
         ) : view === "table" ? (
           <Table>
             <TableHeader>
               <TableRow>
-                {showMember && <TableHead>Member</TableHead>}
-                <TableHead>Project</TableHead>
-                <TableHead className="min-w-[220px]">Summary</TableHead>
-                <TableHead className="w-[108px] text-center">Agent</TableHead>
-                <TableHead>Model</TableHead>
+                {showMember && <TableHead>{t("colMember")}</TableHead>}
+                <TableHead>{t("colProject")}</TableHead>
+                <TableHead className="min-w-[220px]">{t("colSummary")}</TableHead>
+                <TableHead className="w-[108px] text-center">{t("colAgent")}</TableHead>
+                <TableHead>{t("colModel")}</TableHead>
                 <SortableHead
-                  label="Tokens"
+                  label={t("colTokens")}
                   sortKey="tokens"
                   sort={sort}
                   dir={dir}
@@ -418,7 +421,7 @@ export function SessionsExplorer({
                   className="text-right"
                 />
                 <SortableHead
-                  label="Duration"
+                  label={t("colDuration")}
                   sortKey="duration"
                   sort={sort}
                   dir={dir}
@@ -426,7 +429,7 @@ export function SessionsExplorer({
                   className="text-right"
                 />
                 <SortableHead
-                  label="When"
+                  label={t("colWhen")}
                   sortKey="when"
                   sort={sort}
                   dir={dir}
@@ -456,7 +459,7 @@ export function SessionsExplorer({
                     <TableCell className="max-w-md">
                       <p className="text-sm leading-snug text-muted-foreground">
                         {s.summary?.trim() || (
-                          <span className="italic">{s.messageCount} messages — no summary yet</span>
+                          <span className="italic">{t("noSummary", { count: s.messageCount })}</span>
                         )}
                       </p>
                     </TableCell>
@@ -511,14 +514,14 @@ export function SessionsExplorer({
                   </div>
                   <p className="mt-2 line-clamp-3 text-sm leading-snug text-muted-foreground">
                     {s.summary?.trim() || (
-                      <span className="italic">{s.messageCount} messages — no summary yet</span>
+                      <span className="italic">{t("noSummary", { count: s.messageCount })}</span>
                     )}
                   </p>
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                     <ToolBadge tool={s.tool} className="text-xs" />
                     <Badge variant="outline">{prettyModel(s.model)}</Badge>
                     <span className="ml-auto tabular-nums">
-                      {formatCompact(tokens)} tok
+                      {t("tokensShort", { value: formatCompact(tokens) })}
                       {s.engagedMs > 0 ? ` · ${formatDuration(s.engagedMs)}` : ""}
                     </span>
                   </div>
@@ -532,9 +535,12 @@ export function SessionsExplorer({
         {filtered.length > 0 && (
           <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3 text-sm text-muted-foreground">
             <span className="tabular-nums">
-              {safePage * PAGE_SIZE + 1}–{Math.min((safePage + 1) * PAGE_SIZE, filtered.length)} of{" "}
-              {filtered.length} session{filtered.length === 1 ? "" : "s"}
-              {hasFilters ? ` (filtered from ${sessions.length})` : ""}
+              {t("paginationRange", {
+                from: safePage * PAGE_SIZE + 1,
+                to: Math.min((safePage + 1) * PAGE_SIZE, filtered.length),
+                count: filtered.length,
+              })}
+              {hasFilters ? t("filteredFrom", { total: sessions.length }) : ""}
             </span>
             {pageCount > 1 && (
               <div className="flex items-center gap-1">
@@ -544,7 +550,7 @@ export function SessionsExplorer({
                   disabled={safePage === 0}
                   onClick={() => setPage(safePage - 1)}
                 >
-                  Previous
+                  {t("previous")}
                 </Button>
                 <span className="px-2 tabular-nums">
                   {safePage + 1} / {pageCount}
@@ -555,7 +561,7 @@ export function SessionsExplorer({
                   disabled={safePage >= pageCount - 1}
                   onClick={() => setPage(safePage + 1)}
                 >
-                  Next
+                  {t("next")}
                 </Button>
               </div>
             )}

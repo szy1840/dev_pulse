@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { formatNumber } from "@/lib/format";
 import { isUnknownLabel, UnknownValue } from "@/components/unknown-hint";
@@ -20,10 +21,11 @@ export function DonutChart({
   centerValue?: string;
   unit?: string;
 }) {
+  const t = useTranslations("charts");
   const total = data.reduce((a, s) => a + s.value, 0);
 
   if (total === 0) {
-    return <p className="py-10 text-center text-sm text-muted-foreground">No data yet.</p>;
+    return <p className="py-10 text-center text-sm text-muted-foreground">{t("empty.noData")}</p>;
   }
 
   return (

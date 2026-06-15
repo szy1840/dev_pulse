@@ -1,4 +1,5 @@
 import { Cpu, Wrench } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { requireUserId, getActiveTeam, getViewerTimezone } from "@/lib/auth";
 import { getRecentSessions, getModelBreakdown, getToolBreakdown } from "@/lib/queries";
 import { resolveRange } from "@/lib/period";
@@ -18,6 +19,8 @@ export default async function SessionsPage({
   const team = await getActiveTeam(userId);
   if (!team) return null;
 
+  const t = await getTranslations("sessions");
+
   const params = await searchParams;
   const timeZone = await getViewerTimezone(userId);
   const range = resolveRange(params.view ?? params.period, params.anchor, timeZone);
@@ -34,10 +37,8 @@ export default async function SessionsPage({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">Sessions</h1>
-          <p className="text-sm text-muted-foreground">
-            Search, filter and export your team&apos;s AI coding sessions
-          </p>
+          <h1 className="text-xl font-semibold">{t("heading")}</h1>
+          <p className="text-sm text-muted-foreground">{t("description")}</p>
         </div>
         <PeriodSelector
           view={range.view}
@@ -50,10 +51,10 @@ export default async function SessionsPage({
 
       {rows.length > 0 && (
         <div className="grid gap-4 lg:grid-cols-2">
-          <ChartCard title="By model" description="Session share by model" icon={<Cpu className="h-4 w-4" />}>
-            <DonutChart data={modelSlices} centerLabel="sessions" />
+          <ChartCard title={t("byModelTitle")} description={t("byModelDescription")} icon={<Cpu className="h-4 w-4" />}>
+            <DonutChart data={modelSlices} centerLabel={t("sessionsCenterLabel")} />
           </ChartCard>
-          <ChartCard title="By tool" description="Sessions per AI tool" icon={<Wrench className="h-4 w-4" />}>
+          <ChartCard title={t("byToolTitle")} description={t("byToolDescription")} icon={<Wrench className="h-4 w-4" />}>
             <RadialChart data={toolItems} />
           </ChartCard>
         </div>

@@ -8,6 +8,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { useTranslations } from "next-intl";
 import { ChartSize } from "./chart-size";
 import { formatNumber, formatCompact, formatDuration } from "@/lib/format";
 import { isUnknownLabel, UnknownHint } from "@/components/unknown-hint";
@@ -62,7 +63,7 @@ function CategoryTick({ x = 0, y = 0, payload }: CategoryTickProps) {
 /** Horizontal bar ranking. `valueLabel`/`subLabel` name the metrics in tooltips. */
 export function BarListChart({
   data,
-  valueLabel = "Value",
+  valueLabel,
   subLabel,
   height = 240,
   format = "number",
@@ -74,9 +75,12 @@ export function BarListChart({
   /** How to format the bar-end label and tooltip value (e.g. "duration"). */
   format?: ValueFormat;
 }) {
+  const t = useTranslations("charts");
   if (data.length === 0) {
-    return <p className="py-10 text-center text-sm text-muted-foreground">No data yet.</p>;
+    return <p className="py-10 text-center text-sm text-muted-foreground">{t("empty.noData")}</p>;
   }
+
+  const resolvedValueLabel = valueLabel ?? t("barList.value");
 
   const formatValue = VALUE_FORMATTERS[format];
 
@@ -100,7 +104,7 @@ export function BarListChart({
           content={({ active, payload }) => {
             if (!active || !payload?.length) return null;
             const item = payload[0].payload as BarItem;
-            const rows = [{ label: valueLabel, value: formatValue(item.value) }];
+            const rows = [{ label: resolvedValueLabel, value: formatValue(item.value) }];
             if (subLabel && item.sub !== undefined) {
               rows.push({ label: subLabel, value: formatNumber(item.sub) });
             }

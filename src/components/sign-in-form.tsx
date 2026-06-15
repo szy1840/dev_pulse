@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Activity } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +12,7 @@ import { Label } from "@/components/ui/label";
 
 export function SignInForm({ redirectTo }: { redirectTo: string }) {
   const router = useRouter();
+  const t = useTranslations("auth");
   const [pending, startTransition] = useTransition();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,7 +28,7 @@ export function SignInForm({ redirectTo }: { redirectTo: string }) {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(json.error ?? "Sign in failed.");
+        setError(json.error ?? t("signIn.failed"));
         return;
       }
       router.push(redirectTo);
@@ -40,12 +42,12 @@ export function SignInForm({ redirectTo }: { redirectTo: string }) {
         <div className="mx-auto flex items-center gap-2 font-semibold">
           <Activity className="h-5 w-5" /> DevPulse AI
         </div>
-        <CardTitle>Welcome back</CardTitle>
-        <CardDescription>Sign in to your team dashboard.</CardDescription>
+        <CardTitle>{t("signIn.title")}</CardTitle>
+        <CardDescription>{t("signIn.subtitle")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t("fields.email")}</Label>
           <Input
             id="email"
             type="email"
@@ -56,7 +58,7 @@ export function SignInForm({ redirectTo }: { redirectTo: string }) {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">{t("fields.password")}</Label>
           <Input
             id="password"
             type="password"
@@ -68,12 +70,12 @@ export function SignInForm({ redirectTo }: { redirectTo: string }) {
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button className="w-full" onClick={submit} disabled={pending}>
-          {pending ? "Signing in…" : "Sign in"}
+          {pending ? t("signIn.submitting") : t("signIn.submit")}
         </Button>
         <p className="text-center text-sm text-muted-foreground">
-          No account?{" "}
+          {t("signIn.noAccount")}{" "}
           <Link href="/sign-up" className="font-medium text-foreground underline-offset-4 hover:underline">
-            Create one
+            {t("signIn.createOne")}
           </Link>
         </p>
       </CardContent>

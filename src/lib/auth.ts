@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { createInsForgeServerClient } from "@/lib/insforge/server";
 import { getAdmin } from "@/lib/insforge/admin";
 import { DEFAULT_TIMEZONE, isValidTimezone } from "@/lib/timezone";
+import { DEFAULT_LOCALE, LOCALE_COOKIE, isLocale, type Locale } from "@/lib/locale";
 
 const ACTIVE_TEAM_COOKIE = "dp_active_team";
 export const TIMEZONE_COOKIE = "dp_timezone";
@@ -153,6 +154,29 @@ export async function getViewerTimezone(userId: string): Promise<string> {
   if (cookieTz && isValidTimezone(cookieTz)) return cookieTz;
 
   return DEFAULT_TIMEZONE;
+}
+
+/** Profile UI language, or null when the user has not chosen one yet. */
+export async function getProfileLocale(userId: string): Promise<Locale | null> {
+  const admin = getAdmin();
+  const { data } = await admin.database
+    .from("profiles")
+    .select("locale")
+    .eq("id", userId)
+    .maybeSingle();
+  const loc = (data as { locale: string | null } | null)?.locale ?? null;
+  return isLocale(loc) ? loc : null;
+}
+
+/** Viewer UI language: saved profile value, then locale cookie, then default. */
+export async function getViewerLocale(userId: string): Promise<Locale> {
+  const saved = await getProfileLocale(userId);
+  if (saved) return saved;
+
+  const cookieLocale = (await cookies()).get(LOCALE_COOKIE)?.value;
+  if (isLocale(cookieLocale)) return cookieLocale;
+
+  return DEFAULT_LOCALE;
 }
 
 export { ACTIVE_TEAM_COOKIE };

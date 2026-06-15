@@ -1,0 +1,36 @@
+{
+  "nav": {
+    "overview": "概览",
+    "sessions": "会话",
+    "members": "成员",
+    "settings": "设置"
+  },
+  "userMenu": {
+    "member": "成员",
+    "signOut": "退出登录",
+    "signingOut": "正在退出…"
+  },
+  "teamSwitcher": {
+    "selectTeam": "选择团队",
+    "createOrJoin": "创建或加入团队"
+  },
+  "language": {
+    "label": "语言",
+    "description": "仪表盘界面的显示语言。",
+    "section": "语言",
+    "sectionDescription": "选择仪表盘界面的显示语言。"
+  },
+  "period": {
+    "day": "日",
+    "week": "周",
+    "month": "月",
+    "all": "全部时间",
+    "previous": "上一周期",
+    "next": "下一周期",
+    "jumpToCurrent": "回到当前"
+  },
+  "membersView": {
+    "detail": "详细",
+    "compact": "紧凑"
+  }
+}
