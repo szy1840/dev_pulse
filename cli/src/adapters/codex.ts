@@ -3,10 +3,17 @@ import { join, basename } from "node:path";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { buildSessionSummary } from "../summary.js";
-import { buildSummaryNotes, cleanUserText } from "../session-notes.js";
+import {
+  buildSummaryNotes,
+  cleanIntentMessageText,
+  cleanUserText,
+  intentMessageDedupeKey,
+  INTENT_MESSAGES_VERSION,
+  MAX_INTENT_MESSAGES,
+} from "../session-notes.js";
 import { ACTIVITY_ALGO_VERSION, buildActivityFromEvents } from "../activity.js";
 import { SPAN_ALGO_VERSION, buildSpans, type SpanEvent } from "../spans.js";
-import type { SessionMetadata } from "../types.js";
+import type { IntentMessage, SessionMetadata } from "../types.js";
 import type { DiscoveredSession, ToolAdapter } from "./types.js";
 
 const TOOL = "codex";
@@ -119,6 +126,8 @@ function parseCodexSession(filePath: string, index: Map<string, SessionIndexRow>
   let model: string | null = null;
   const userMessages: string[] = [];
   const seenUserMessages = new Set<string>();
+  const intentMessages: IntentMessage[] = [];
+  const seenIntentMessages = new Set<string>();
   let messageCount = 0;
   const timestamps: number[] = [];
   let lastTokenUsage: CodexTokenUsage | null = null;
@@ -130,14 +139,33 @@ function parseCodexSession(filePath: string, index: Map<string, SessionIndexRow>
   const summed = { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 };
   let sawUsageDelta = false;
 
-  function pushUserMessage(raw: string | null | undefined) {
+  function pushUserMessage(raw: string | null | undefined, rowTs: number | null, source: string) {
+    const intentText = raw ? cleanIntentMessageText(raw) : null;
+    if (
+      intentText &&
+      !isNoiseUserText(intentText) &&
+      intentMessages.length < MAX_INTENT_MESSAGES
+    ) {
+      const key = intentMessageDedupeKey(intentText);
+      if (!seenIntentMessages.has(key)) {
+        seenIntentMessages.add(key);
+        intentMessages.push({
+          index: intentMessages.length,
+          t: rowTs === null ? null : new Date(rowTs).toISOString(),
+          text: intentText,
+          source,
+        });
+      }
+    }
+
     const cleaned = raw ? cleanUserText(raw) : null;
     if (!cleaned || isNoiseUserText(cleaned) || seenUserMessages.has(cleaned)) return;
     seenUserMessages.add(cleaned);
     userMessages.push(cleaned);
   }
 
-  for (const line of lines) {
+  for (let lineNo = 0; lineNo < lines.length; lineNo++) {
+    const line = lines[lineNo];
     const trimmed = line.trim();
     if (!trimmed) continue;
     let row: {
@@ -181,7 +209,7 @@ function parseCodexSession(filePath: string, index: Map<string, SessionIndexRow>
         };
       };
       if (p.type === "user_message" && typeof p.message === "string") {
-        pushUserMessage(p.message);
+        pushUserMessage(p.message, rowTs, `event_msg:${lineNo + 1}`);
       }
       if (p.type === "token_count") {
         lastTokenUsage = p.info?.total_token_usage ?? p.info?.last_token_usage ?? lastTokenUsage;
@@ -243,7 +271,7 @@ function parseCodexSession(filePath: string, index: Map<string, SessionIndexRow>
       if (p.type === "message") {
         messageCount++;
         if (p.role === "user") {
-          pushUserMessage(extractMessageText(p));
+          pushUserMessage(extractMessageText(p), rowTs, `response_item:${lineNo + 1}`);
         }
         if (rowTs !== null) spanEvents.push({ ts: rowTs, isMessage: true });
       }
@@ -320,6 +348,7 @@ function parseCodexSession(filePath: string, index: Map<string, SessionIndexRow>
     engagedMs: activity.engagedMs,
     activityIntervals: activity.activityIntervals,
     spans: buildSpans(spanEvents),
+    intentMessages,
     localCwd: cwd,
   };
 }
@@ -336,7 +365,7 @@ export const codexAdapter: ToolAdapter = {
     const index = loadSessionIndex();
     return listCodexSessionFiles().map((file) => ({
       stateKey: `${TOOL}:${file}`,
-      fingerprint: `${safeFingerprint(file)}:${ACTIVITY_ALGO_VERSION}:${SPAN_ALGO_VERSION}`,
+      fingerprint: `${safeFingerprint(file)}:${ACTIVITY_ALGO_VERSION}:${SPAN_ALGO_VERSION}:${INTENT_MESSAGES_VERSION}`,
       load: () => parseCodexSession(file, index),
     }));
   },

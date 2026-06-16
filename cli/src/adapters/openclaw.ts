@@ -3,10 +3,16 @@ import { join, basename } from "node:path";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { buildSessionSummary } from "../summary.js";
-import { buildSummaryNotes, cleanUserText } from "../session-notes.js";
+import {
+  buildSummaryNotes,
+  cleanIntentMessageText,
+  cleanUserText,
+  INTENT_MESSAGES_VERSION,
+  MAX_INTENT_MESSAGES,
+} from "../session-notes.js";
 import { ACTIVITY_ALGO_VERSION, buildActivityFromEvents } from "../activity.js";
 import { SPAN_ALGO_VERSION, buildSpans, type SpanEvent } from "../spans.js";
-import type { SessionMetadata } from "../types.js";
+import type { IntentMessage, SessionMetadata } from "../types.js";
 import type { DiscoveredSession, ToolAdapter } from "./types.js";
 
 const TOOL = "openclaw";
@@ -100,6 +106,7 @@ function parseOpenclawSession(filePath: string): SessionMetadata | null {
   let sessionId: string | null = null;
   let cwd: string | null = null;
   const userMessages: string[] = [];
+  const intentMessages: IntentMessage[] = [];
   let messageCount = 0;
   let inputTokens = 0;
   let outputTokens = 0;
@@ -109,7 +116,8 @@ function parseOpenclawSession(filePath: string): SessionMetadata | null {
   const timestamps: number[] = [];
   const spanEvents: SpanEvent[] = [];
 
-  for (const line of lines) {
+  for (let lineNo = 0; lineNo < lines.length; lineNo++) {
+    const line = lines[lineNo];
     const trimmed = line.trim();
     if (!trimmed) continue;
     let entry: OpenclawEntry;
@@ -139,6 +147,15 @@ function parseOpenclawSession(filePath: string): SessionMetadata | null {
       if (msg.role === "user") {
         const text = textFromContent(msg.content);
         if (text) {
+          const intentText = cleanIntentMessageText(text);
+          if (intentText && intentMessages.length < MAX_INTENT_MESSAGES) {
+            intentMessages.push({
+              index: intentMessages.length,
+              t: entryTs === null ? null : new Date(entryTs).toISOString(),
+              text: intentText,
+              source: `line:${lineNo + 1}`,
+            });
+          }
           const cleaned = cleanUserText(text);
           if (cleaned) userMessages.push(cleaned);
         }
@@ -203,6 +220,7 @@ function parseOpenclawSession(filePath: string): SessionMetadata | null {
     engagedMs: activity.engagedMs,
     activityIntervals: activity.activityIntervals,
     spans: buildSpans(spanEvents),
+    intentMessages,
     localCwd: cwd,
   };
 }
@@ -218,7 +236,7 @@ export const openclawAdapter: ToolAdapter = {
   discover(): DiscoveredSession[] {
     return listOpenclawSessions().map((file) => ({
       stateKey: `${TOOL}:${file}`,
-      fingerprint: `${safeFingerprint(file)}:${ACTIVITY_ALGO_VERSION}:${SPAN_ALGO_VERSION}`,
+      fingerprint: `${safeFingerprint(file)}:${ACTIVITY_ALGO_VERSION}:${SPAN_ALGO_VERSION}:${INTENT_MESSAGES_VERSION}`,
       load: () => parseOpenclawSession(file),
     }));
   },

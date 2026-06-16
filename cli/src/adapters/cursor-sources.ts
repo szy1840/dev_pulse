@@ -2,10 +2,11 @@ import { homedir, platform } from "node:os";
 import { join, basename } from "node:path";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { buildSessionSummary } from "../summary.js";
-import { buildSummaryNotes } from "../session-notes.js";
+import { buildSummaryNotes, cleanIntentMessageText } from "../session-notes.js";
+import type { IntentMessage } from "../types.js";
 
 /** Bump when summary derivation or token/model logic changes so sessions re-sync once. */
-export const CURSOR_SUMMARY_VERSION = "v6";
+export const CURSOR_SUMMARY_VERSION = "v7";
 
 /** Map Cursor internal model placeholders to friendlier ids. */
 export function normalizeCursorModel(model: string | null | undefined): string | null {
@@ -82,14 +83,40 @@ function stripTags(text: string): string {
     .trim();
 }
 
-export function userMessagesFromTranscript(filePath: string, limit = 12): string[] {
-  const out: string[] = [];
+function isoFromUnknown(value: unknown): string | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const millis = value < 10_000_000_000 ? value * 1000 : value;
+    return new Date(millis).toISOString();
+  }
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Date.parse(value);
+    if (!Number.isNaN(parsed)) return new Date(parsed).toISOString();
+  }
+  return null;
+}
+
+function transcriptRowTime(row: Record<string, unknown>): string | null {
+  return (
+    isoFromUnknown(row.timestamp) ??
+    isoFromUnknown(row.createdAt) ??
+    isoFromUnknown(row.time) ??
+    isoFromUnknown(row.date)
+  );
+}
+
+export function intentMessagesFromTranscript(filePath: string, limit = 80): IntentMessage[] {
+  const out: IntentMessage[] = [];
   try {
-    const lines = readFileSync(filePath, "utf8").trim().split("\n");
-    for (const line of lines) {
+    const lines = readFileSync(filePath, "utf8").split("\n");
+    for (let lineNo = 0; lineNo < lines.length; lineNo++) {
+      const line = lines[lineNo];
       if (!line.trim() || out.length >= limit) break;
       const o = JSON.parse(line) as {
         role?: string;
+        timestamp?: unknown;
+        createdAt?: unknown;
+        time?: unknown;
+        date?: unknown;
         message?: { content?: { type?: string; text?: string }[] };
       };
       if (o.role !== "user") continue;
@@ -97,13 +124,24 @@ export function userMessagesFromTranscript(filePath: string, limit = 12): string
         .filter((c) => c.type === "text" && c.text)
         .map((c) => c.text!)
         .join("\n");
-      const cleaned = stripTags(text);
-      if (cleaned) out.push(cleaned);
+      const cleaned = cleanIntentMessageText(stripTags(text));
+      if (cleaned) {
+        out.push({
+          index: out.length,
+          t: transcriptRowTime(o as Record<string, unknown>),
+          text: cleaned,
+          source: `transcript:${lineNo + 1}`,
+        });
+      }
     }
   } catch {
     /* ignore */
   }
   return out;
+}
+
+export function userMessagesFromTranscript(filePath: string, limit = 12): string[] {
+  return intentMessagesFromTranscript(filePath, limit).map((m) => m.text);
 }
 
 export function relativeFilePaths(files: string[]): string[] {
@@ -183,7 +221,7 @@ export function buildCursorSummary(input: {
   messageCount: number;
   stateDb: SqliteDb | null;
   transcriptPath: string | null;
-}): { summary: string; summaryNotes: string | null } {
+}): { summary: string; summaryNotes: string | null; intentMessages: IntentMessage[] } {
   const { trackingTitle, files, messageCount, stateDb, transcriptPath } = input;
   const projectName = guessProjectName(files);
   const base = { projectName, messageCount };
@@ -192,10 +230,20 @@ export function buildCursorSummary(input: {
   let composerTitle: string | null = null;
   if (stateDb) composerTitle = composerTitleFromState(stateDb, input.conversationId);
 
-  const userMessages = transcriptPath ? userMessagesFromTranscript(transcriptPath) : [];
+  const intentMessages = transcriptPath ? intentMessagesFromTranscript(transcriptPath) : [];
+  const userMessages = intentMessages.slice(0, 12).map((m) => m.text);
   if (userMessages.length === 0 && stateDb) {
     const first = firstUserFromState(stateDb, input.conversationId);
-    if (first) userMessages.push(first);
+    const cleaned = cleanIntentMessageText(first);
+    if (cleaned) {
+      userMessages.push(cleaned);
+      intentMessages.push({
+        index: intentMessages.length,
+        t: null,
+        text: cleaned,
+        source: "state:first-user",
+      });
+    }
   }
 
   const summaryNotes = buildSummaryNotes({
@@ -208,23 +256,24 @@ export function buildCursorSummary(input: {
 
   if (stateDb && composerTitle) {
     const s = buildSessionSummary({ ...base, explicitSummary: composerTitle, firstUserText: null });
-    if (s) return { summary: s, summaryNotes };
+    if (s) return { summary: s, summaryNotes, intentMessages };
   }
 
   if (trackingTitle?.trim()) {
     const s = buildSessionSummary({ ...base, explicitSummary: trackingTitle, firstUserText: null });
-    if (s) return { summary: s, summaryNotes };
+    if (s) return { summary: s, summaryNotes, intentMessages };
   }
 
   if (userMessages[0]) {
     const s = buildSessionSummary({ ...base, explicitSummary: null, firstUserText: userMessages[0] });
-    if (s) return { summary: s, summaryNotes };
+    if (s) return { summary: s, summaryNotes, intentMessages };
   }
 
-  if (files.length > 0) return { summary: buildFileSummary(files), summaryNotes };
+  if (files.length > 0) return { summary: buildFileSummary(files), summaryNotes, intentMessages };
 
   return {
     summary: `Cursor session — ${messageCount} AI request${messageCount === 1 ? "" : "s"}.`,
     summaryNotes,
+    intentMessages,
   };
 }

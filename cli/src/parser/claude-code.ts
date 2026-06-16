@@ -2,11 +2,16 @@ import { homedir } from "node:os";
 import { join, basename } from "node:path";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import type { ParsedSession, SessionMetadata } from "../types.js";
+import type { IntentMessage, ParsedSession, SessionMetadata } from "../types.js";
 import { buildActivityFromEvents } from "../activity.js";
 import { buildSpans, type SpanEvent } from "../spans.js";
 import { buildSessionSummary } from "../summary.js";
-import { buildSummaryNotes, cleanUserText } from "../session-notes.js";
+import {
+  buildSummaryNotes,
+  cleanIntentMessageText,
+  cleanUserText,
+  MAX_INTENT_MESSAGES,
+} from "../session-notes.js";
 
 const TOOL_NAME = "claude-code";
 
@@ -93,6 +98,7 @@ export function parseSessionFile(filePath: string): ParsedSession | null {
   let firstUserText: string | null = null;
   let explicitSummary: string | null = null;
   const userMessages: string[] = [];
+  const intentMessages: IntentMessage[] = [];
   let messageCount = 0;
   let inputTokens = 0;
   let outputTokens = 0;
@@ -102,7 +108,8 @@ export function parseSessionFile(filePath: string): ParsedSession | null {
   const timestamps: number[] = [];
   const spanEvents: SpanEvent[] = [];
 
-  for (const line of lines) {
+  for (let lineNo = 0; lineNo < lines.length; lineNo++) {
+    const line = lines[lineNo];
     const trimmed = line.trim();
     if (!trimmed) continue;
     let entry: Entry;
@@ -132,6 +139,15 @@ export function parseSessionFile(filePath: string): ParsedSession | null {
     if (entry.type === "user" && !entry.isMeta && msg) {
       const text = textFromContent(msg.content);
       if (text) {
+        const intentText = cleanIntentMessageText(text);
+        if (intentText && intentMessages.length < MAX_INTENT_MESSAGES) {
+          intentMessages.push({
+            index: intentMessages.length,
+            t: entryTs === null ? null : new Date(entryTs).toISOString(),
+            text: intentText,
+            source: `line:${lineNo + 1}`,
+          });
+        }
         const cleaned = cleanUserText(text);
         if (cleaned) {
           userMessages.push(cleaned);
@@ -210,6 +226,7 @@ export function parseSessionFile(filePath: string): ParsedSession | null {
     engagedMs: activity.engagedMs,
     activityIntervals: activity.activityIntervals,
     spans: buildSpans(spanEvents),
+    intentMessages,
     localCwd: cwd,
   };
 

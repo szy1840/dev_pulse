@@ -44,6 +44,25 @@ export type ExplorerSession = {
   startedAt: Date | null;
   userName: string | null;
   userImage: string | null;
+  intentMessages: {
+    index: number;
+    occurredAt: Date | null;
+    text: string;
+    source: string | null;
+  }[];
+  taskSpans: {
+    index: number;
+    title: string;
+    summary: string | null;
+    intent: string | null;
+    object: string | null;
+    action: string | null;
+    outcome: string | null;
+    startedAt: Date | null;
+    endedAt: Date | null;
+    confidence: number | null;
+    sourceModel: string | null;
+  }[];
 };
 
 type SortKey = "when" | "tokens" | "duration" | "messages";
@@ -85,6 +104,69 @@ function FilterSelect({
         </option>
       ))}
     </select>
+  );
+}
+
+function IntentMessagesPreview({
+  messages,
+}: {
+  messages: ExplorerSession["intentMessages"];
+}) {
+  if (messages.length === 0) return null;
+  const shown = messages.slice(0, 6);
+  const hidden = messages.length - shown.length;
+  return (
+    <details className="mt-2 rounded-md border border-border/70 bg-muted/25 px-2 py-1.5 text-xs">
+      <summary className="cursor-pointer select-none font-medium text-muted-foreground hover:text-foreground">
+        {messages.length} intent message{messages.length === 1 ? "" : "s"}
+      </summary>
+      <ol className="mt-2 space-y-1.5">
+        {shown.map((m) => (
+          <li key={`${m.index}:${m.text}`} className="flex gap-2">
+            <span className="mt-0.5 w-10 shrink-0 tabular-nums text-muted-foreground">
+              {m.occurredAt ? format(m.occurredAt, "HH:mm") : `#${m.index + 1}`}
+            </span>
+            <span className="line-clamp-2 min-w-0 text-foreground/80" title={m.source ?? undefined}>
+              {m.text}
+            </span>
+          </li>
+        ))}
+      </ol>
+      {hidden > 0 && <div className="mt-1.5 text-muted-foreground">+{hidden} more</div>}
+    </details>
+  );
+}
+
+function TaskSpansPreview({
+  tasks,
+}: {
+  tasks: ExplorerSession["taskSpans"];
+}) {
+  if (tasks.length === 0) return null;
+  const shown = tasks.slice(0, 5);
+  const hidden = tasks.length - shown.length;
+  return (
+    <details className="mt-2 rounded-md border border-primary/20 bg-primary/5 px-2 py-1.5 text-xs">
+      <summary className="cursor-pointer select-none font-medium text-foreground hover:text-primary">
+        Dream Cycle · {tasks.length} task{tasks.length === 1 ? "" : "s"}
+      </summary>
+      <ol className="mt-2 space-y-2">
+        {shown.map((task) => (
+          <li key={`${task.index}:${task.title}`} className="space-y-0.5">
+            <div className="flex gap-2">
+              <span className="shrink-0 tabular-nums text-muted-foreground">#{task.index + 1}</span>
+              <span className="line-clamp-1 min-w-0 font-medium text-foreground">{task.title}</span>
+            </div>
+            {(task.summary || task.outcome || task.intent) && (
+              <div className="line-clamp-2 pl-6 text-muted-foreground">
+                {task.summary || task.outcome || task.intent}
+              </div>
+            )}
+          </li>
+        ))}
+      </ol>
+      {hidden > 0 && <div className="mt-1.5 text-muted-foreground">+{hidden} more</div>}
+    </details>
   );
 }
 
@@ -228,7 +310,15 @@ export function SessionsExplorer({
       if (model !== ALL && s.model !== model) return false;
       if (project !== ALL && s.projectName !== project) return false;
       if (q) {
-        const hay = [s.summary, s.projectName, s.userName, s.model, s.tool]
+        const hay = [
+          s.summary,
+          s.projectName,
+          s.userName,
+          s.model,
+          s.tool,
+          s.taskSpans.map((t) => [t.title, t.summary, t.intent, t.object, t.action, t.outcome].filter(Boolean).join(" ")).join(" "),
+          s.intentMessages.map((m) => m.text).join(" "),
+        ]
           .filter(Boolean)
           .join(" ")
           .toLowerCase();
@@ -457,11 +547,15 @@ export function SessionsExplorer({
                       </span>
                     </TableCell>
                     <TableCell className="max-w-md">
-                      <p className="text-sm leading-snug text-muted-foreground">
+                      <div className="text-sm leading-snug text-muted-foreground">
                         {s.summary?.trim() || (
                           <span className="italic">{t("noSummary", { count: s.messageCount })}</span>
                         )}
-                      </p>
+                        <TaskSpansPreview tasks={s.taskSpans} />
+                        {s.taskSpans.length === 0 && (
+                          <IntentMessagesPreview messages={s.intentMessages} />
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex justify-center">
@@ -517,6 +611,10 @@ export function SessionsExplorer({
                       <span className="italic">{t("noSummary", { count: s.messageCount })}</span>
                     )}
                   </p>
+                  <TaskSpansPreview tasks={s.taskSpans} />
+                  {s.taskSpans.length === 0 && (
+                    <IntentMessagesPreview messages={s.intentMessages} />
+                  )}
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                     <ToolBadge tool={s.tool} className="text-xs" />
                     <Badge variant="outline">{prettyModel(s.model)}</Badge>

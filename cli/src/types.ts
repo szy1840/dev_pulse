@@ -16,6 +16,15 @@ export interface WorkSpan {
   fileHashes: string[];
 }
 
+/** Cleaned user-side message material for later semantic task extraction. */
+export interface IntentMessage {
+  index: number;
+  /** Event time when the source transcript exposes it. */
+  t: string | null;
+  text: string;
+  source?: string | null;
+}
+
 /** The session payload uploaded to the backend. Matches the server's zod schema. */
 export interface SessionMetadata {
   externalId: string;
@@ -39,6 +48,8 @@ export interface SessionMetadata {
   activityIntervals: { start: string; end: string }[];
   /** Work spans for task attribution (tools without per-event usage upload none). */
   spans?: WorkSpan[];
+  /** Cleaned user intent messages for Dream Cycle task extraction. */
+  intentMessages?: IntentMessage[];
   /** Hash of the git repo root containing cwd — join key against commits. */
   repoRootHash?: string | null;
   /** Local-only absolute cwd for the git collector. Stripped before upload. */

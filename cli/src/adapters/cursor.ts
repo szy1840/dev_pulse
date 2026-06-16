@@ -122,7 +122,7 @@ function buildComposerSessions(): { metadata: SessionMetadata; fingerprint: stri
       const bubble = stateDb ? aggregateBubbleStats(stateDb, convId) : null;
       const messageCount = Math.max(a.requestIds.size || a.hashes, bubble?.messageCount ?? 0);
       const projectName = guessProjectName(files);
-      const { summary, summaryNotes } = buildCursorSummary({
+      const { summary, summaryNotes, intentMessages } = buildCursorSummary({
         conversationId: convId,
         trackingTitle: trackingTitles.get(convId) ?? null,
         files,
@@ -160,6 +160,7 @@ function buildComposerSessions(): { metadata: SessionMetadata; fingerprint: stri
           endedAt: activity.endedAt,
           engagedMs: activity.engagedMs,
           activityIntervals: activity.activityIntervals,
+          intentMessages,
         },
       });
     }

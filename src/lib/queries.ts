@@ -49,6 +49,29 @@ type SessionRow = {
   activity_intervals: unknown;
 };
 
+type SessionIntentMessageRow = {
+  session_id: string;
+  message_index: number;
+  occurred_at: string | null;
+  text: string;
+  source: string | null;
+};
+
+type TaskSpanRow = {
+  session_id: string;
+  task_index: number;
+  title: string;
+  summary: string | null;
+  intent: string | null;
+  object: string | null;
+  action: string | null;
+  outcome: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+  confidence: number | null;
+  source_model: string | null;
+};
+
 const SESSION_COLUMNS =
   "id, user_id, external_id, tool, model, project_name, summary, message_count, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, started_at, ended_at, engaged_ms, activity_intervals";
 
@@ -540,6 +563,7 @@ export async function getRecentSessions(
   const { data, error } = await q.order("started_at", { ascending: false }).limit(limit);
   if (error || !data) return [];
   const rows = data as SessionRow[];
+  const sessionIds = rows.map((r) => r.id);
 
   const userIds = [...new Set(rows.map((r) => r.user_id))];
   const profilesById = new Map<string, { name: string | null; avatar_url: string | null }>();
@@ -550,6 +574,70 @@ export async function getRecentSessions(
       .in("id", userIds);
     for (const p of (profileData as { id: string; name: string | null; avatar_url: string | null }[] | null) ?? []) {
       profilesById.set(p.id, { name: p.name, avatar_url: p.avatar_url });
+    }
+  }
+
+  const intentMessagesBySession = new Map<
+    string,
+    { index: number; occurredAt: Date | null; text: string; source: string | null }[]
+  >();
+  const taskSpansBySession = new Map<
+    string,
+    {
+      index: number;
+      title: string;
+      summary: string | null;
+      intent: string | null;
+      object: string | null;
+      action: string | null;
+      outcome: string | null;
+      startedAt: Date | null;
+      endedAt: Date | null;
+      confidence: number | null;
+      sourceModel: string | null;
+    }[]
+  >();
+  if (sessionIds.length > 0) {
+    const [{ data: intentData }, { data: taskData }] = await Promise.all([
+      admin.database
+        .from("session_intent_messages")
+        .select("session_id, message_index, occurred_at, text, source")
+        .in("session_id", sessionIds)
+        .order("message_index", { ascending: true }),
+      admin.database
+        .from("task_spans")
+        .select(
+          "session_id, task_index, title, summary, intent, object, action, outcome, started_at, ended_at, confidence, source_model"
+        )
+        .in("session_id", sessionIds)
+        .order("task_index", { ascending: true }),
+    ]);
+    for (const m of (intentData as SessionIntentMessageRow[] | null) ?? []) {
+      const list = intentMessagesBySession.get(m.session_id) ?? [];
+      list.push({
+        index: m.message_index,
+        occurredAt: toDate(m.occurred_at),
+        text: m.text,
+        source: m.source,
+      });
+      intentMessagesBySession.set(m.session_id, list);
+    }
+    for (const t of (taskData as TaskSpanRow[] | null) ?? []) {
+      const list = taskSpansBySession.get(t.session_id) ?? [];
+      list.push({
+        index: t.task_index,
+        title: t.title,
+        summary: t.summary,
+        intent: t.intent,
+        object: t.object,
+        action: t.action,
+        outcome: t.outcome,
+        startedAt: toDate(t.started_at),
+        endedAt: toDate(t.ended_at),
+        confidence: t.confidence,
+        sourceModel: t.source_model,
+      });
+      taskSpansBySession.set(t.session_id, list);
     }
   }
 
@@ -567,6 +655,8 @@ export async function getRecentSessions(
     endedAt: toDate(s.ended_at),
     userName: profilesById.get(s.user_id)?.name ?? null,
     userImage: profilesById.get(s.user_id)?.avatar_url ?? null,
+    intentMessages: intentMessagesBySession.get(s.id) ?? [],
+    taskSpans: taskSpansBySession.get(s.id) ?? [],
   }));
 }
 

@@ -83,8 +83,9 @@ For each session the CLI extracts **lightweight metadata only**:
 - input/output/cache token usage (where the tool exposes it)
 - project name + a hashed project path (the raw path is never uploaded)
 - a short rule-based summary (derived locally — Cursor uses composer title, first user query, or edited files)
+- cleaned user intent messages for Dream Cycle task extraction
 
-**No transcript content, code, or prompts are uploaded** — only derived metadata and cleaned `summaryNotes` for server-side LLM summarization (when `OPENROUTER_API_KEY` is set on the dashboard).
+**No code or full transcripts are uploaded.** DevPulse uploads cleaned user-side intent messages, plus derived metadata and cleaned `summaryNotes`, so the dashboard can generate session summaries and semantic task spans.
 
 ## Requirements
 

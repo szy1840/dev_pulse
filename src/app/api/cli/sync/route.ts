@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAdmin } from "@/lib/insforge/admin";
@@ -21,6 +22,13 @@ const workSpanSchema = z.object({
   cacheCreationTokens: z.number().int().min(0).default(0),
   messageCount: z.number().int().min(0).default(0),
   fileHashes: z.array(z.string().max(32)).max(50).default([]),
+});
+
+const intentMessageSchema = z.object({
+  index: z.number().int().min(0).max(100_000),
+  t: z.string().datetime().nullish(),
+  text: z.string().min(1).max(1000),
+  source: z.string().max(120).nullish(),
 });
 
 const sessionSchema = z.object({
@@ -51,6 +59,7 @@ const sessionSchema = z.object({
     .max(200)
     .default([]),
   spans: z.array(workSpanSchema).max(100).default([]),
+  intentMessages: z.array(intentMessageSchema).max(100).default([]),
 });
 
 const payloadSchema = z.object({
@@ -67,6 +76,77 @@ function maxDate(a?: string | null, b?: string | null): string | null {
   if (!a) return b ?? null;
   if (!b) return a;
   return a > b ? a : b;
+}
+
+type IntentMessagePayload = z.infer<typeof intentMessageSchema>;
+
+function intentDedupeKey(text: string): string {
+  return text.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function normalizeIntentMessages(messages: IntentMessagePayload[]): IntentMessagePayload[] {
+  const seen = new Set<string>();
+  return messages
+    .filter((m) => m.text.trim())
+    .sort((a, b) => {
+      if (a.t && b.t && a.t !== b.t) return a.t < b.t ? -1 : 1;
+      if (a.t && !b.t) return -1;
+      if (!a.t && b.t) return 1;
+      return a.index - b.index;
+    })
+    .filter((m) => {
+      const key = intentDedupeKey(m.text);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map((m, index) => ({
+      index,
+      t: m.t ?? null,
+      text: m.text.trim(),
+      source: m.source ?? null,
+    }));
+}
+
+function intentTextHash(text: string): string {
+  return createHash("sha256").update(text).digest("hex").slice(0, 32);
+}
+
+function intentSourceHash(messages: IntentMessagePayload[]): string {
+  const material = normalizeIntentMessages(messages)
+    .map((m) => `${m.index}:${m.t ?? ""}:${intentDedupeKey(m.text)}`)
+    .join("\n");
+  return createHash("sha256").update(material).digest("hex").slice(0, 32);
+}
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
+
+async function lookupSessionIds(
+  admin: ReturnType<typeof getAdmin>,
+  userId: string,
+  externalIds: string[]
+): Promise<Map<string, string> | null> {
+  const idByExternal = new Map<string, string>();
+  const uniqueExternalIds = [...new Set(externalIds)];
+  for (const group of chunk(uniqueExternalIds, 50)) {
+    const { data, error } = await admin.database
+      .from("sessions")
+      .select("id, external_id")
+      .eq("user_id", userId)
+      .in("external_id", group);
+    if (error) {
+      console.error("session id lookup failed", error);
+      return null;
+    }
+    for (const row of (data as { id: string; external_id: string }[] | null) ?? []) {
+      idByExternal.set(row.external_id, row.id);
+    }
+  }
+  return idByExternal;
 }
 
 export async function POST(req: Request) {
@@ -118,6 +198,10 @@ export async function POST(req: Request) {
       spans: [...(prev.spans ?? []), ...(s.spans ?? [])].sort((a, b) =>
         a.startedAt < b.startedAt ? -1 : 1
       ),
+      intentMessages: normalizeIntentMessages([
+        ...(prev.intentMessages ?? []),
+        ...(s.intentMessages ?? []),
+      ]),
       projectName: prev.projectName ?? s.projectName,
       summary: prev.summary ?? s.summary,
       summaryNotes: [prev.summaryNotes, s.summaryNotes].filter(Boolean).join("\n\n") || undefined,
@@ -137,6 +221,7 @@ export async function POST(req: Request) {
   }
   for (const s of merged.values()) {
     s.engagedMs = engagedMsFromIntervalsIso((s.activityIntervals ?? []) as ActivityInterval[]);
+    s.intentMessages = normalizeIntentMessages(s.intentMessages ?? []);
   }
   const unique = [...merged.values()];
   const externalIds = unique.map((s) => s.externalId);
@@ -192,22 +277,119 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Failed to store sessions" }, { status: 500 });
   }
 
+  // Replace cleaned user intent messages for every uploaded session. These are
+  // the local raw materials that later Dream Cycle jobs can segment semantically.
+  const intentIdByExternal = await lookupSessionIds(admin, userId, externalIds);
+  if (!intentIdByExternal) {
+    console.error("intent session lookup failed");
+  } else {
+    const sessionIds = unique
+      .map((s) => intentIdByExternal.get(s.externalId))
+      .filter((id): id is string => Boolean(id));
+
+    const intentRows = unique.flatMap((s) => {
+      const sessionId = intentIdByExternal.get(s.externalId);
+      if (!sessionId) return [];
+      return (s.intentMessages ?? []).map((message, idx) => ({
+        session_id: sessionId,
+        user_id: userId,
+        team_id: teamId,
+        message_index: idx,
+        occurred_at: message.t ?? null,
+        text: message.text,
+        source: message.source ?? null,
+        text_hash: intentTextHash(message.text),
+      }));
+    });
+
+    if (sessionIds.length > 0) {
+      const { error: delError } = await admin.database
+        .from("session_intent_messages")
+        .delete()
+        .in("session_id", sessionIds);
+      if (delError) {
+        console.error("intent message delete failed", delError);
+      } else if (intentRows.length > 0) {
+        const { error: intentError } = await admin.database
+          .from("session_intent_messages")
+          .insert(intentRows);
+        if (intentError) console.error("intent message insert failed", intentError);
+      }
+    }
+
+    const jobCandidates = unique
+      .map((s) => {
+        const sessionId = intentIdByExternal.get(s.externalId);
+        const intentMessages = s.intentMessages ?? [];
+        if (!sessionId || intentMessages.length === 0) return null;
+        return {
+          session_id: sessionId,
+          user_id: userId,
+          team_id: teamId,
+          source_hash: intentSourceHash(intentMessages),
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => Boolean(row));
+
+    if (jobCandidates.length > 0) {
+      const sessionIdsWithJobs = jobCandidates.map((j) => j.session_id);
+      const { data: existingJobs, error: jobLookupError } = await admin.database
+        .from("semantic_task_extraction_jobs")
+        .select("session_id, status, source_hash")
+        .in("session_id", sessionIdsWithJobs);
+
+      if (jobLookupError) {
+        console.error("semantic job lookup failed", jobLookupError);
+      } else {
+        const existingBySession = new Map(
+          (
+            (existingJobs as
+              | { session_id: string; status: string; source_hash: string }[]
+              | null) ?? []
+          ).map((j) => [j.session_id, j])
+        );
+        const now = new Date().toISOString();
+        const jobRows = jobCandidates
+          .filter((j) => {
+            const existing = existingBySession.get(j.session_id);
+            if (!existing) return true;
+            if (existing.source_hash !== j.source_hash) return true;
+            return false;
+          })
+          .map((j) => ({
+            ...j,
+            status: "pending",
+            attempts: 0,
+            model: null,
+            last_error: null,
+            queued_at: now,
+            started_at: null,
+            finished_at: null,
+          }));
+
+        if (jobRows.length > 0) {
+          const { error: jobError } = await admin.database
+            .from("semantic_task_extraction_jobs")
+            .upsert(jobRows, { onConflict: "session_id" });
+          if (jobError) console.error("semantic job enqueue failed", jobError);
+        }
+      }
+    }
+  }
+
   // Replace work spans for the sessions that carried any. Spans derive from a
   // single transcript parse, so delete + insert is the natural idempotent shape.
   const withSpans = unique.filter((s) => (s.spans?.length ?? 0) > 0);
   if (withSpans.length > 0) {
-    const { data: idRows, error: idError } = await admin.database
-      .from("sessions")
-      .select("id, external_id")
-      .eq("user_id", userId)
-      .in("external_id", withSpans.map((s) => s.externalId));
+    const idByExternal = await lookupSessionIds(
+      admin,
+      userId,
+      withSpans.map((s) => s.externalId)
+    );
 
-    if (idError) {
-      console.error("span session lookup failed", idError);
+    if (!idByExternal) {
+      console.error("span session lookup failed");
     } else {
-      const idByExternal = new Map(
-        ((idRows as { id: string; external_id: string }[]) ?? []).map((r) => [r.external_id, r.id])
-      );
       const sessionIds = withSpans
         .map((s) => idByExternal.get(s.externalId))
         .filter((id): id is string => Boolean(id));
