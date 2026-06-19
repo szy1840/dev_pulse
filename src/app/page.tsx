@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
+import { LocaleSwitcher } from "@/components/locale-switcher";
 import { getCurrentUser } from "@/lib/auth";
 
 const TOOLS = ["Claude Code", "Codex", "Cursor", "OpenClaw"];
@@ -30,6 +31,7 @@ export default async function Home() {
             DevPulse AI
           </div>
           <div className="flex items-center gap-2">
+            <LocaleSwitcher />
             {user ? (
               <Button asChild size="sm">
                 <Link href="/dashboard">{t("nav.openDashboard")}</Link>
