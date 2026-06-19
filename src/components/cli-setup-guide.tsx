@@ -92,6 +92,11 @@ export function CliSetupGuide({
   if (compact) {
     return (
       <div className={cn("space-y-4", className)}>
+        <section className="rounded-xl border bg-background p-4 shadow-sm">
+          <h3 className="mb-1 font-medium">{t("cli.openclawTitle")}</h3>
+          <p className="mb-3 text-xs text-muted-foreground">{t("cli.openclawBody")}</p>
+          <CopyBlock text={t("cli.openclawPrompt")} multiline />
+        </section>
         <StepList />
         <div className="rounded-lg border bg-muted/40 p-3">
           <p className="text-xs text-muted-foreground">
