@@ -3,7 +3,6 @@ import { CheckCircle2 } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 import { LocaleSwitcher } from "@/components/locale-switcher";
-import { LandingCopyButton } from "@/components/landing-copy-button";
 import { LandingShowcase } from "@/components/landing-showcase";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -277,12 +276,7 @@ export default async function Home() {
                 <div className="mb-[18px] font-mono text-[15px] font-semibold text-[#0066cc]">02</div>
                 <h3 className="mb-2.5 text-[21px] font-semibold tracking-[-0.02em]">{t("how.s2t")}</h3>
                 <p className="mb-[18px] text-[16px] leading-relaxed text-[#6e6e73]">{t("how.s2b")}</p>
-                <div className="relative rounded-2xl bg-[#f5f5f7] p-4 pb-[15px] pt-9 font-mono text-[12.5px] leading-relaxed text-[#3a3a3c]">
-                  <LandingCopyButton
-                    text={t("how.prompt")}
-                    label={t("how.copy")}
-                    copiedLabel={t("how.copied")}
-                  />
+                <div className="rounded-2xl bg-[#f5f5f7] p-4 font-mono text-[12.5px] leading-relaxed text-[#3a3a3c]">
                   <span className="whitespace-pre-wrap break-words">{t("how.prompt")}</span>
                 </div>
               </div>
