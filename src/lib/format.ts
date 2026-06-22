@@ -1,3 +1,5 @@
+import type { Locale } from "@/lib/locale";
+
 /** Compact number formatting for dashboard stats (e.g. 12_300 -> "12.3K"). */
 export function formatCompact(n: number): string {
   return new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(
@@ -10,12 +12,17 @@ export function formatNumber(n: number): string {
 }
 
 /** Human-friendly duration from milliseconds (e.g. "1h 12m", "4m", "38s"). */
-export function formatDuration(ms: number): string {
+export function formatDuration(ms: number, locale?: Locale): string {
   if (!ms || ms < 0) return "—";
   const totalSeconds = Math.round(ms / 1000);
   const h = Math.floor(totalSeconds / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);
   const s = totalSeconds % 60;
+  if (locale === "zh") {
+    if (h > 0) return `${h}小时${m}分`;
+    if (m > 0) return `${m}分`;
+    return `${s}秒`;
+  }
   if (h > 0) return `${h}h ${m}m`;
   if (m > 0) return `${m}m`;
   return `${s}s`;

@@ -3,16 +3,15 @@
 import { CircleHelp } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-
-export const UNKNOWN_HINT_TEXT =
-  'This session is included in the team’s usage. “Unknown” means the local AI tool did not expose the model or project name clearly enough for DevPulse to identify it.';
 
 export function isUnknownLabel(value: string | null | undefined) {
   return value?.trim().toLowerCase() === "unknown";
 }
 
 export function UnknownHint({ className }: { className?: string }) {
+  const t = useTranslations("sessions");
   const triggerRef = useRef<HTMLButtonElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const pinnedRef = useRef(false);
@@ -80,6 +79,8 @@ export function UnknownHint({ className }: { className?: string }) {
     };
   }, [close, open, updatePosition]);
 
+  const hintText = t("unknownHint");
+
   return (
     <>
       <button
@@ -89,9 +90,9 @@ export function UnknownHint({ className }: { className?: string }) {
           "inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-muted-foreground/80 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
           className
         )}
-        aria-label={UNKNOWN_HINT_TEXT}
+        aria-label={hintText}
         aria-expanded={open}
-        title={UNKNOWN_HINT_TEXT}
+        title={hintText}
         onBlur={() => {
           if (!pinnedRef.current) setOpen(false);
         }}
@@ -135,7 +136,7 @@ export function UnknownHint({ className }: { className?: string }) {
               if (!pinnedRef.current) setOpen(false);
             }}
           >
-            {UNKNOWN_HINT_TEXT}
+            {hintText}
           </div>,
           document.body
         )}
@@ -144,9 +145,10 @@ export function UnknownHint({ className }: { className?: string }) {
 }
 
 export function UnknownValue({ className }: { className?: string }) {
+  const t = useTranslations("sessions");
   return (
     <span className={cn("inline-flex items-center gap-1", className)}>
-      <span>Unknown</span>
+      <span>{t("unknown")}</span>
       <UnknownHint />
     </span>
   );

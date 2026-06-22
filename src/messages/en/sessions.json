@@ -35,6 +35,12 @@
     "paginationRange": "{from}–{to} of {count} {count, plural, one {session} other {sessions}}",
     "filteredFrom": " (filtered from {total})",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "unknown": "Unknown",
+    "unknownHint": "This session is included in the team's usage. \u201cUnknown\u201d means the local AI tool did not expose the model or project name clearly enough for DevPulse to identify it.",
+    "intentMessages": "{count, plural, one {# intent message} other {# intent messages}}",
+    "moreCount": "+{count} more",
+    "dreamCycle": "Dream Cycle \u00b7 {count, plural, one {# task} other {# tasks}}",
+    "exportCsv": "CSV"
   }
 }

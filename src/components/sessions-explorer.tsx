@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { formatDistanceToNow, format } from "date-fns";
+import { zhCN } from "date-fns/locale";
+import { isLocale, type Locale } from "@/lib/locale";
 import {
   ArrowDown,
   ArrowUp,
@@ -112,13 +114,14 @@ function IntentMessagesPreview({
 }: {
   messages: ExplorerSession["intentMessages"];
 }) {
+  const t = useTranslations("sessions");
   if (messages.length === 0) return null;
   const shown = messages.slice(0, 6);
   const hidden = messages.length - shown.length;
   return (
     <details className="mt-2 rounded-md border border-border/70 bg-muted/25 px-2 py-1.5 text-xs">
       <summary className="cursor-pointer select-none font-medium text-muted-foreground hover:text-foreground">
-        {messages.length} intent message{messages.length === 1 ? "" : "s"}
+        {t("intentMessages", { count: messages.length })}
       </summary>
       <ol className="mt-2 space-y-1.5">
         {shown.map((m) => (
@@ -132,7 +135,9 @@ function IntentMessagesPreview({
           </li>
         ))}
       </ol>
-      {hidden > 0 && <div className="mt-1.5 text-muted-foreground">+{hidden} more</div>}
+      {hidden > 0 && (
+        <div className="mt-1.5 text-muted-foreground">{t("moreCount", { count: hidden })}</div>
+      )}
     </details>
   );
 }
@@ -142,13 +147,14 @@ function TaskSpansPreview({
 }: {
   tasks: ExplorerSession["taskSpans"];
 }) {
+  const t = useTranslations("sessions");
   if (tasks.length === 0) return null;
   const shown = tasks.slice(0, 5);
   const hidden = tasks.length - shown.length;
   return (
     <details className="mt-2 rounded-md border border-primary/20 bg-primary/5 px-2 py-1.5 text-xs">
       <summary className="cursor-pointer select-none font-medium text-foreground hover:text-primary">
-        Dream Cycle · {tasks.length} task{tasks.length === 1 ? "" : "s"}
+        {t("dreamCycle", { count: tasks.length })}
       </summary>
       <ol className="mt-2 space-y-2">
         {shown.map((task) => (
@@ -165,7 +171,9 @@ function TaskSpansPreview({
           </li>
         ))}
       </ol>
-      {hidden > 0 && <div className="mt-1.5 text-muted-foreground">+{hidden} more</div>}
+      {hidden > 0 && (
+        <div className="mt-1.5 text-muted-foreground">{t("moreCount", { count: hidden })}</div>
+      )}
     </details>
   );
 }
@@ -267,6 +275,9 @@ export function SessionsExplorer({
   showMember?: boolean;
 }) {
   const t = useTranslations("sessions");
+  const rawLocale = useLocale();
+  const locale: Locale = isLocale(rawLocale) ? rawLocale : "en";
+  const dateLocale = locale === "zh" ? zhCN : undefined;
   const [query, setQuery] = useState("");
   const [member, setMember] = useState(ALL);
   const [tool, setTool] = useState(ALL);
@@ -277,6 +288,7 @@ export function SessionsExplorer({
   const [view, setView] = useState<ViewMode>("table");
   const [page, setPage] = useState(0);
 
+  const unknownLabel = t("unknown");
   const facets = useMemo(() => {
     const count = <T,>(map: Map<string, number>, key: string) =>
       map.set(key, (map.get(key) ?? 0) + 1);
@@ -293,14 +305,18 @@ export function SessionsExplorer({
     const toOptions = (map: Map<string, number>, pretty?: (v: string) => string) =>
       [...map.entries()]
         .sort((a, b) => b[1] - a[1])
-        .map(([value, n]) => ({ value, label: `${pretty ? pretty(value) : value} (${n})` }));
+        .map(([value, n]) => {
+          let label = pretty ? pretty(value) : value;
+          if (isUnknownLabel(label)) label = unknownLabel;
+          return { value, label: `${label} (${n})` };
+        });
     return {
       members: toOptions(members),
       tools: toOptions(tools, prettyTool),
       models: toOptions(models, prettyModel),
       projects: toOptions(projects).slice(0, 30),
     };
-  }, [sessions]);
+  }, [sessions, unknownLabel]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -476,7 +492,7 @@ export function SessionsExplorer({
               className="h-9 gap-1.5"
             >
               <Download className="h-3.5 w-3.5" />
-              CSV
+              {t("exportCsv")}
             </Button>
           </div>
         </div>
@@ -569,13 +585,13 @@ export function SessionsExplorer({
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{formatCompact(tokens)}</TableCell>
                     <TableCell className="text-right tabular-nums text-muted-foreground">
-                      {s.engagedMs > 0 ? formatDuration(s.engagedMs) : "—"}
+                      {s.engagedMs > 0 ? formatDuration(s.engagedMs, locale) : "—"}
                     </TableCell>
                     <TableCell
                       className="whitespace-nowrap text-right text-muted-foreground"
-                      title={s.startedAt ? format(s.startedAt, "PPpp") : undefined}
+                      title={s.startedAt ? format(s.startedAt, "PPpp", { locale: dateLocale }) : undefined}
                     >
-                      {s.startedAt ? formatDistanceToNow(s.startedAt, { addSuffix: true }) : "—"}
+                      {s.startedAt ? formatDistanceToNow(s.startedAt, { addSuffix: true, locale: dateLocale }) : "—"}
                     </TableCell>
                   </TableRow>
                 );
@@ -601,9 +617,9 @@ export function SessionsExplorer({
                     </span>
                     <span
                       className="ml-auto whitespace-nowrap text-xs text-muted-foreground"
-                      title={s.startedAt ? format(s.startedAt, "PPpp") : undefined}
+                      title={s.startedAt ? format(s.startedAt, "PPpp", { locale: dateLocale }) : undefined}
                     >
-                      {s.startedAt ? formatDistanceToNow(s.startedAt, { addSuffix: true }) : "—"}
+                      {s.startedAt ? formatDistanceToNow(s.startedAt, { addSuffix: true, locale: dateLocale }) : "—"}
                     </span>
                   </div>
                   <p className="mt-2 line-clamp-3 text-sm leading-snug text-muted-foreground">
@@ -617,10 +633,12 @@ export function SessionsExplorer({
                   )}
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                     <ToolBadge tool={s.tool} className="text-xs" />
-                    <Badge variant="outline">{prettyModel(s.model)}</Badge>
+                    <Badge variant="outline">
+                      {isUnknownLabel(prettyModel(s.model)) ? <UnknownValue /> : prettyModel(s.model)}
+                    </Badge>
                     <span className="ml-auto tabular-nums">
                       {t("tokensShort", { value: formatCompact(tokens) })}
-                      {s.engagedMs > 0 ? ` · ${formatDuration(s.engagedMs)}` : ""}
+                      {s.engagedMs > 0 ? ` · ${formatDuration(s.engagedMs, locale)}` : ""}
                     </span>
                   </div>
                 </div>
