@@ -1,60 +1,83 @@
 {
   "landing": {
     "nav": {
-      "openDashboard": "Open dashboard",
       "signIn": "Sign in",
-      "getStarted": "Get started"
+      "getStarted": "Try it free",
+      "openDashboard": "Open dashboard"
     },
     "hero": {
-      "badge": "CLI-first · Team dashboard · No code uploaded",
-      "headline": "See how your team uses AI coding tools",
-      "subhead": "DevPulse turns local AI coding sessions into team-level usage insights, cost visibility, and daily work summaries.",
-      "goToDashboard": "Go to dashboard",
-      "createAccount": "Create free account",
-      "haveAccount": "I already have an account",
-      "flow": "Account first → create or join a team → then connect the CLI on your machine.",
-      "toolsLabel": "Supports mainstream AI coding tools"
+      "kicker": "Who's best with AI on your team? See it on one board.",
+      "h1": "Turn your best people's AI playbook into everyone's.",
+      "sub": "DevPulse turns your top performers' AI methods into a live leaderboard and shareable templates anyone can follow, so your whole team learns from each other and levels up together.",
+      "cta1": "Try it free",
+      "cta2": "See how it works",
+      "t1": "30-second setup",
+      "t2": "No code",
+      "t3": "Never touches your chats or client data",
+      "goToDashboard": "Go to dashboard"
+    },
+    "board": {
+      "title": "AI usage",
+      "sub": "This week · Acme Marketing · Everyone",
+      "live": "Live",
+      "ftt": "Most popular method this week",
+      "ftb": "\"Content template\" by Maya Lin · 7 people using it",
+      "unit": "uses"
+    },
+    "val": {
+      "title": "Make using AI something everyone wants to do",
+      "c1t": "A leaderboard that gets everyone going",
+      "c1b": "See who's using AI most and best, ranked in real time. The friendly competition gets people going, no nagging needed.",
+      "c2t": "Good methods, shared by all",
+      "c2b": "Automatically turns your best people's AI methods into templates anyone can follow. New hires get up to speed in days.",
+      "c3t": "Clarity for the boss",
+      "c3b": "See which teams are ahead and where the gaps are, in one view. Drive AI adoption with data, not guesswork.",
+      "c4t": "One sentence, no code",
+      "c4b": "Send the line we give you to your OpenClaw. It sets itself up in 30 seconds. No tech skills required."
+    },
+    "show": {
+      "title": "Here's what you'll see inside",
+      "sub": "Seven views that give you complete visibility into how your team works with AI.",
+      "s1tab": "Overview", "s1t": "Your team's AI at a glance", "s1d": "Sessions, tokens, active people and active time, plus the daily trend. All on one screen.",
+      "s2tab": "Leaderboard", "s2t": "See who uses AI the most", "s2d": "Ranked by sessions, tokens and active time, so people compete and learn from each other.",
+      "s3tab": "Summary", "s3t": "AI writes the monthly recap for you", "s3d": "Auto-generated summaries for the team and every member, so you never have to ask around.",
+      "s4tab": "Sessions", "s4t": "Every AI session, searchable", "s4d": "Filter by member, project, tool or model, and export to a sheet in one click.",
+      "s5tab": "Insights", "s5t": "Models and tools, all clear", "s5d": "Model mix, where tokens go, tool breakdown and top projects, all in view.",
+      "s6tab": "Active hours", "s6t": "When your team is most active", "s6d": "A weekly heatmap of AI activity by hour, for the whole team or any one person.",
+      "s7tab": "ROI", "s7t": "AI spend, tied to real output", "s7d": "Attribute AI spend to each shipped result, so the return is visible."
     },
     "how": {
-      "eyebrow": "How it works",
-      "title": "From sign-up to team visibility in four steps",
-      "step1Title": "Sign up & join a team",
-      "step1Body": "Create an account, then create a new team or join with an invite code.",
-      "step1Cta": "Sign up",
-      "step2Title": "Log in on your machine",
-      "step2Body": "Install the CLI and run login — your browser opens to authorize this computer.",
-      "step3Title": "Manage devices (optional)",
-      "step3Body": "See connected machines and revoke access anytime under Settings.",
-      "step3Cta": "Open Settings",
-      "step4Title": "Sync your sessions",
-      "step4Body": "Scan local AI tool logs and upload metadata — run again anytime."
+      "title": "Up and running in 5 minutes",
+      "sub": "No technical know-how. You never touch a command line.",
+      "s1t": "Sign up, create a team",
+      "s1b": "A minute to sign up. Bring your colleagues in.",
+      "s1tag": "No card needed",
+      "s2t": "Send one line to OpenClaw",
+      "s2b": "Copy the text below and send it to your OpenClaw. It sets itself up.",
+      "prompt": "Set up DevPulse for me: install and log in to devpulse, then sync my AI usage. Open the browser to authorize if needed, and tell me when it's done.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "s3t": "Open the board, watch it happen",
+      "s3b": "Live rankings, daily highlights, the whole team's picture, all organized automatically.",
+      "s3tag": "Updates automatically"
     },
-    "features": {
-      "eyebrow": "What you get",
-      "title": "A team dashboard built from local session metadata",
-      "toolsTitle": "Tools & models",
-      "toolsBody": "See which coding agents (Cursor, Claude Code, OpenClaw) and models each session used.",
-      "tokensTitle": "Tokens & activity",
-      "tokensBody": "Track token usage, session counts, active time, and trends over time — by team or member.",
-      "memberTitle": "Member activity",
-      "memberBody": "Per-person views: who was active, what they worked on, and how agents split their day.",
-      "summariesTitle": "Daily summaries",
-      "summariesBody": "AI-generated recaps for each member and the whole team — focused on what shipped, not token counts.",
-      "historyTitle": "Session history",
-      "historyBody": "Browse synced sessions with project, agent, model, and a short summary per session.",
-      "privacyTitle": "Privacy by design",
-      "privacyBody": "Only derived metadata and summaries are uploaded — never full transcripts, prompts, or code."
+    "boss": {
+      "eyebrow": "For the boss",
+      "title": "As the boss, you'll see",
+      "body": "Your team using AI more, learning from each other, productivity ticking up. AI adoption stops being a slogan and becomes a board that gets better every day.",
+      "stat": "↑ 38%",
+      "lab": "Avg. growth in AI usage per person in month one"
     },
-    "cta": {
-      "title": "Ready to make AI work visible?",
-      "bodyUser": "Run devpulse login on your machine to connect, then devpulse sync to upload sessions.",
-      "bodyGuest": "Start with a free account. The CLI connects after your team is set up.",
-      "settings": "Settings",
-      "viewDashboard": "View dashboard",
-      "getStartedFree": "Get started free"
+    "priv": {
+      "title": "We see how, never what",
+      "body": "DevPulse only records which AI was used, how much, and what got done. Your chats, prompts, code and client data are never touched."
     },
-    "footer": {
-      "tagline": "Lightweight AI work intelligence for small teams"
-    }
+    "final": {
+      "title": "Get your team going today",
+      "sub": "30-second setup, free to start.",
+      "cta": "Try it free",
+      "goToDashboard": "Go to dashboard"
+    },
+    "footer": "DevPulse · See how your team uses AI"
   }
 }

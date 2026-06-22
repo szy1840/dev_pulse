@@ -1,36 +1,60 @@
 import Link from "next/link";
-import {
-  Activity,
-  ArrowRight,
-  BarChart3,
-  Cpu,
-  KeyRound,
-  Shield,
-  Sparkles,
-  Terminal,
-  Users,
-  Wrench,
-} from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { ArrowRight, CheckCircle2, Shield, Zap } from "lucide-react";
+import { getTranslations, getLocale } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 import { LocaleSwitcher } from "@/components/locale-switcher";
+import { LandingCopyButton } from "@/components/landing-copy-button";
 import { getCurrentUser } from "@/lib/auth";
 
-const TOOLS = ["Claude Code", "Codex", "Cursor", "OpenClaw"];
+const BOARD_ROWS = {
+  zh: [
+    { rk: "1", nm: "林悦", rl: "内容组", ct: "1,284", up: "↑38%", w: 100, lead: true, color: "#ff9f0a", ini: "林" },
+    { rk: "2", nm: "陈睿", rl: "投放组", ct: "1,102", up: "↑21%", w: 86, lead: false, color: "#0066cc", ini: "陈" },
+    { rk: "3", nm: "苏晴", rl: "设计组", ct: "968", up: "↑54%", w: 75, lead: false, color: "#ff2d55", ini: "苏" },
+    { rk: "4", nm: "王浩", rl: "策略组", ct: "743", up: "↑12%", w: 58, lead: false, color: "#5856d6", ini: "王" },
+    { rk: "5", nm: "周琳", rl: "运营组", ct: "612", up: "↑29%", w: 48, lead: false, color: "#34c759", ini: "周" },
+  ],
+  en: [
+    { rk: "1", nm: "Maya Lin", rl: "Content", ct: "1,284", up: "↑38%", w: 100, lead: true, color: "#ff9f0a", ini: "M" },
+    { rk: "2", nm: "Ray Chen", rl: "Paid Media", ct: "1,102", up: "↑21%", w: 86, lead: false, color: "#0066cc", ini: "R" },
+    { rk: "3", nm: "Sophie Su", rl: "Design", ct: "968", up: "↑54%", w: 75, lead: false, color: "#ff2d55", ini: "S" },
+    { rk: "4", nm: "Hao Wang", rl: "Strategy", ct: "743", up: "↑12%", w: 58, lead: false, color: "#5856d6", ini: "H" },
+    { rk: "5", nm: "Lin Zhou", rl: "Operations", ct: "612", up: "↑29%", w: 48, lead: false, color: "#34c759", ini: "L" },
+  ],
+};
 
 export default async function Home() {
-  const user = await getCurrentUser();
-  const t = await getTranslations("landing");
+  const [user, t, locale] = await Promise.all([
+    getCurrentUser(),
+    getTranslations("landing"),
+    getLocale(),
+  ]);
+
+  const rows = BOARD_ROWS[locale as keyof typeof BOARD_ROWS] ?? BOARD_ROWS.en;
+
+  const SLIDES = [
+    { tab: t("show.s1tab"), title: t("show.s1t"), desc: t("show.s1d") },
+    { tab: t("show.s2tab"), title: t("show.s2t"), desc: t("show.s2d") },
+    { tab: t("show.s3tab"), title: t("show.s3t"), desc: t("show.s3d") },
+    { tab: t("show.s4tab"), title: t("show.s4t"), desc: t("show.s4d") },
+    { tab: t("show.s5tab"), title: t("show.s5t"), desc: t("show.s5d") },
+    { tab: t("show.s6tab"), title: t("show.s6t"), desc: t("show.s6d") },
+    { tab: t("show.s7tab"), title: t("show.s7t"), desc: t("show.s7d") },
+  ];
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2 font-semibold">
-            <Activity className="h-5 w-5" />
-            DevPulse AI
+    <div className="flex min-h-screen flex-col overflow-x-hidden bg-white text-[#1d1d1f]">
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b border-black/[0.09] bg-white/72 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-[1024px] items-center justify-between px-7 py-0" style={{ height: 52 }}>
+          <div className="flex items-center gap-2 text-[17px] font-semibold tracking-[-0.02em]">
+            <svg width="23" height="23" viewBox="0 0 32 32" fill="none" className="shrink-0">
+              <rect width="32" height="32" rx="8" fill="#0066cc" />
+              <path d="M6 16h4l2.5-7 4 14 2.5-7H26" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            DevPulse
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3.5">
             <LocaleSwitcher />
             {user ? (
               <Button asChild size="sm">
@@ -38,10 +62,10 @@ export default async function Home() {
               </Button>
             ) : (
               <>
-                <Button asChild variant="ghost" size="sm">
-                  <Link href="/sign-in">{t("nav.signIn")}</Link>
-                </Button>
-                <Button asChild size="sm">
+                <Link href="/sign-in" className="hidden text-sm font-medium text-[#0066cc] hover:underline sm:block">
+                  {t("nav.signIn")}
+                </Link>
+                <Button asChild size="sm" className="rounded-full bg-[#0066cc] hover:bg-[#0071e3]">
                   <Link href="/sign-up">{t("nav.getStarted")}</Link>
                 </Button>
               </>
@@ -52,235 +76,289 @@ export default async function Home() {
 
       <main className="flex-1">
         {/* Hero */}
-        <section className="mx-auto max-w-5xl px-6 pb-16 pt-16 text-center sm:pt-20">
-          <span className="inline-flex items-center gap-2 rounded-full border bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
-            <Terminal className="h-3.5 w-3.5" />
-            {t("hero.badge")}
-          </span>
+        <section className="pt-[104px] text-center">
+          <div className="mx-auto max-w-[1024px] px-7">
+            <div className="mx-auto max-w-[860px]">
+              <p className="mb-5 text-[17px] font-medium leading-snug tracking-[-0.01em] text-[#6e6e73]">
+                {t("hero.kicker")}
+              </p>
+              <h1 className="mx-auto mb-6 max-w-[17ch] text-balance text-[clamp(38px,5.2vw,62px)] font-semibold leading-[1.06] tracking-[-0.03em]">
+                {t("hero.h1")}
+              </h1>
+              <p className="mx-auto mb-8 max-w-[40ch] text-balance text-[clamp(18px,2vw,22px)] leading-[1.42] tracking-[-0.01em] text-[#6e6e73]">
+                {t("hero.sub")}
+              </p>
 
-          <h1 className="mx-auto mt-6 max-w-3xl text-balance text-4xl font-bold tracking-tight sm:text-5xl">
-            {t("hero.headline")}
-          </h1>
+              <div className="mb-4 flex flex-wrap items-center justify-center gap-6">
+                {user ? (
+                  <Button asChild size="lg" className="rounded-full bg-[#0066cc] px-7 text-[17px] hover:bg-[#0071e3]">
+                    <Link href="/dashboard">{t("hero.goToDashboard")}</Link>
+                  </Button>
+                ) : (
+                  <>
+                    <Button asChild size="lg" className="rounded-full bg-[#0066cc] px-7 text-[17px] hover:bg-[#0071e3]">
+                      <Link href="/sign-up">{t("hero.cta1")}</Link>
+                    </Button>
+                    <Link href="#how" className="inline-flex items-center gap-1 text-[17px] font-medium text-[#0066cc] hover:underline">
+                      {t("hero.cta2")}
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </>
+                )}
+              </div>
 
-          <p className="mx-auto mt-5 max-w-2xl text-balance text-lg leading-relaxed text-muted-foreground">
-            {t("hero.subhead")}
-          </p>
+              <div className="flex flex-wrap justify-center gap-x-6 gap-y-1 text-[13.5px] text-[#86868b]">
+                {[t("hero.t1"), t("hero.t2"), t("hero.t3")].map((item, i) => (
+                  <span key={i} className="flex items-center gap-1.5">
+                    <span className="h-1 w-1 rounded-full bg-[#86868b]" />
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
 
-          <div className="mt-4 flex flex-col items-center gap-2">
-            <span className="text-xs text-muted-foreground">{t("hero.toolsLabel")}</span>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              {TOOLS.map((tool) => (
-                <span
-                  key={tool}
-                  className="rounded-md border bg-background px-2.5 py-1 text-xs text-muted-foreground"
-                >
-                  {tool}
-                </span>
+            {/* Board mockup */}
+            <div className="relative mx-auto mt-16 max-w-[880px] px-1">
+              <div className="absolute inset-[8%_8%_-4%] -z-10 bg-[radial-gradient(closest-side,rgba(0,102,204,0.16),transparent_78%)] blur-[46px]" />
+              <div className="relative z-10 rounded-3xl border border-black/[0.09] bg-white p-6 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.18),0_8px_24px_-12px_rgba(0,0,0,0.12)]">
+                <div className="mb-4 flex items-center justify-between border-b border-black/[0.05] pb-3.5">
+                  <div>
+                    <div className="text-[15px] font-semibold">{t("board.title")}</div>
+                    <div className="mt-0.5 text-[12.5px] text-[#86868b]">{t("board.sub")}</div>
+                  </div>
+                  <span className="flex items-center gap-1.5 rounded-full bg-[rgba(52,199,89,0.1)] px-2.5 py-1 text-[11.5px] font-semibold text-[#34c759]">
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#34c759]" />
+                    {t("board.live")}
+                  </span>
+                </div>
+
+                <div className="divide-y divide-black/[0.05]">
+                  {rows.map((row) => (
+                    <div
+                      key={row.rk}
+                      className="flex items-center gap-3.5 rounded-2xl px-2.5 py-3"
+                      style={{ background: row.lead ? "rgba(0,102,204,0.045)" : undefined }}
+                    >
+                      <span className="w-6 shrink-0 text-center font-mono text-[13px] font-semibold text-[#86868b]">
+                        {row.lead ? "🥇" : row.rk}
+                      </span>
+                      <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <div
+                          className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full text-[14px] font-semibold text-white"
+                          style={{ background: row.color }}
+                        >
+                          {row.ini}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="truncate text-[15px] font-semibold">{row.nm}</div>
+                          <div className="text-[12px] text-[#86868b]">{row.rl}</div>
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-4">
+                        <div className="w-[150px]">
+                          <div className="mb-1.5 text-right text-[12.5px] text-[#86868b]">
+                            <b className="text-[14px] font-semibold text-[#1d1d1f]">{row.ct}</b>{" "}
+                            {t("board.unit")}
+                          </div>
+                          <div className="h-1.5 overflow-hidden rounded-full bg-black/[0.07]">
+                            <div
+                              className="h-full rounded-full transition-all"
+                              style={{
+                                width: `${row.w}%`,
+                                background: row.lead ? "#ff9f0a" : "#0066cc",
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <div className="min-w-[48px] text-right text-[13px] font-semibold text-[#34c759]">
+                          {row.up}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-3.5 flex items-start gap-3 border-t border-black/[0.05] px-3 pt-3.5">
+                  <CheckCircle2 className="mt-0.5 h-[18px] w-[18px] shrink-0 text-[#0066cc]" />
+                  <div>
+                    <div className="text-[13px] font-semibold">{t("board.ftt")}</div>
+                    <div className="text-[12.5px] text-[#6e6e73]">{t("board.ftb")}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Value */}
+        <section className="py-[132px]">
+          <div className="mx-auto max-w-[1024px] px-7">
+            <div className="mx-auto mb-[72px] max-w-[720px] text-center">
+              <h2 className="text-[clamp(30px,4vw,46px)] font-semibold leading-[1.08] tracking-[-0.028em]">
+                {t("val.title")}
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 gap-x-[72px] gap-y-0 sm:grid-cols-2">
+              {[
+                { t: t("val.c1t"), b: t("val.c1b"), icon: "M3 17l5-5 4 4 8-9" },
+                { t: t("val.c2t"), b: t("val.c2b"), icon: "M3 4h13v16M8 9h6M8 13h4M18 8h3v12a2 2 0 0 1-2 2H9" },
+                { t: t("val.c3t"), b: t("val.c3b"), icon: "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" },
+                { t: t("val.c4t"), b: t("val.c4b"), icon: "M13 2L4 14h6l-1 8 9-12h-6l1-8z" },
+              ].map((feat) => (
+                <div key={feat.t} className="border-t border-black/[0.12] py-[34px]">
+                  <div className="mb-[18px]">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                      <path d={feat.icon} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                  <h3 className="mb-2.5 text-[23px] font-semibold leading-snug tracking-[-0.02em]">{feat.t}</h3>
+                  <p className="max-w-[42ch] text-[16.5px] leading-relaxed text-[#6e6e73]">{feat.b}</p>
+                </div>
               ))}
             </div>
           </div>
+        </section>
 
-          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            {user ? (
-              <Button asChild size="lg" className="gap-2">
-                <Link href="/dashboard">
-                  {t("hero.goToDashboard")}
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-            ) : (
-              <>
-                <Button asChild size="lg" className="gap-2">
-                  <Link href="/sign-up">
-                    {t("hero.createAccount")}
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" size="lg">
-                  <Link href="/sign-in">{t("hero.haveAccount")}</Link>
-                </Button>
-              </>
-            )}
+        {/* Showcase */}
+        <section className="border-t border-black/[0.09] py-[132px]" id="showcase">
+          <div className="mx-auto max-w-[1024px] px-7">
+            <div className="mx-auto mb-[72px] max-w-[720px] text-center">
+              <h2 className="text-[clamp(30px,4vw,46px)] font-semibold leading-[1.08] tracking-[-0.028em]">
+                {t("show.title")}
+              </h2>
+              <p className="mt-4 text-[19px] leading-snug tracking-[-0.01em] text-[#6e6e73]">{t("show.sub")}</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {SLIDES.map((s, i) => (
+                <div key={i} className="rounded-2xl border border-black/[0.09] bg-[#fafafc] p-6">
+                  <span className="mb-3 inline-block rounded-full bg-[#0066cc]/10 px-2.5 py-0.5 text-[12px] font-semibold text-[#0066cc]">
+                    {s.tab}
+                  </span>
+                  <h3 className="mb-2 text-[17px] font-semibold leading-snug tracking-[-0.02em]">{s.title}</h3>
+                  <p className="text-[14.5px] leading-relaxed text-[#6e6e73]">{s.desc}</p>
+                </div>
+              ))}
+            </div>
           </div>
-
-          {!user && (
-            <p className="mt-4 text-sm text-muted-foreground">
-              {t("hero.flow")}
-            </p>
-          )}
         </section>
 
         {/* How it works */}
-        <section className="border-y bg-muted/30">
-          <div className="mx-auto max-w-5xl px-6 py-14">
-            <h2 className="text-center text-sm font-medium uppercase tracking-wide text-muted-foreground">
-              {t("how.eyebrow")}
-            </h2>
-            <p className="mx-auto mt-2 max-w-xl text-center text-lg font-semibold">
-              {t("how.title")}
-            </p>
-
-            <ol className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              <Step
-                n={1}
-                icon={<Users className="h-5 w-5" />}
-                title={t("how.step1Title")}
-                body={t("how.step1Body")}
-                cta={user ? undefined : { label: t("how.step1Cta"), href: "/sign-up" }}
-              />
-              <Step
-                n={2}
-                icon={<Terminal className="h-5 w-5" />}
-                title={t("how.step2Title")}
-                body={t("how.step2Body")}
-                code={"npm install -g devpulse-ai\ndevpulse login"}
-              />
-              <Step
-                n={3}
-                icon={<KeyRound className="h-5 w-5" />}
-                title={t("how.step3Title")}
-                body={t("how.step3Body")}
-                cta={user ? { label: t("how.step3Cta"), href: "/dashboard/settings" } : undefined}
-              />
-              <Step
-                n={4}
-                icon={<Activity className="h-5 w-5" />}
-                title={t("how.step4Title")}
-                body={t("how.step4Body")}
-                code="devpulse sync"
-              />
-            </ol>
-          </div>
-        </section>
-
-        {/* Features */}
-        <section className="mx-auto max-w-5xl px-6 py-14">
-          <h2 className="text-center text-sm font-medium uppercase tracking-wide text-muted-foreground">
-            {t("features.eyebrow")}
-          </h2>
-          <p className="mx-auto mt-2 max-w-xl text-center text-lg font-semibold">
-            {t("features.title")}
-          </p>
-
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Feature
-              icon={<Wrench className="h-5 w-5" />}
-              title={t("features.toolsTitle")}
-              body={t("features.toolsBody")}
-            />
-            <Feature
-              icon={<BarChart3 className="h-5 w-5" />}
-              title={t("features.tokensTitle")}
-              body={t("features.tokensBody")}
-            />
-            <Feature
-              icon={<Users className="h-5 w-5" />}
-              title={t("features.memberTitle")}
-              body={t("features.memberBody")}
-            />
-            <Feature
-              icon={<Sparkles className="h-5 w-5" />}
-              title={t("features.summariesTitle")}
-              body={t("features.summariesBody")}
-            />
-            <Feature
-              icon={<Cpu className="h-5 w-5" />}
-              title={t("features.historyTitle")}
-              body={t("features.historyBody")}
-            />
-            <Feature
-              icon={<Shield className="h-5 w-5" />}
-              title={t("features.privacyTitle")}
-              body={t("features.privacyBody")}
-            />
-          </div>
-        </section>
-
-        {/* Bottom CTA */}
-        <section className="border-t bg-muted/20">
-          <div className="mx-auto max-w-5xl px-6 py-12 text-center">
-            <h2 className="text-xl font-semibold">{t("cta.title")}</h2>
-            <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-              {user ? t("cta.bodyUser") : t("cta.bodyGuest")}
-            </p>
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-              {user ? (
-                <>
-                  <Button asChild variant="outline">
-                    <Link href="/dashboard/settings">{t("cta.settings")}</Link>
-                  </Button>
-                  <Button asChild variant="outline">
-                    <Link href="/dashboard">{t("cta.viewDashboard")}</Link>
-                  </Button>
-                </>
-              ) : (
-                <Button asChild size="lg">
-                  <Link href="/sign-up">{t("cta.getStartedFree")}</Link>
-                </Button>
-              )}
+        <section className="border-t border-black/[0.09] py-[132px]" id="how">
+          <div className="mx-auto max-w-[1024px] px-7">
+            <div className="mx-auto mb-[72px] max-w-[720px] text-center">
+              <h2 className="text-[clamp(30px,4vw,46px)] font-semibold leading-[1.08] tracking-[-0.028em]">
+                {t("how.title")}
+              </h2>
+              <p className="mt-4 text-[19px] leading-snug tracking-[-0.01em] text-[#6e6e73]">{t("how.sub")}</p>
             </div>
+
+            <div className="grid gap-0 lg:grid-cols-3">
+              {/* Step 1 */}
+              <div className="px-0 py-9 lg:py-0 lg:pl-0 lg:pr-[34px]">
+                <div className="mb-[18px] font-mono text-[15px] font-semibold text-[#0066cc]">01</div>
+                <h3 className="mb-2.5 text-[21px] font-semibold tracking-[-0.02em]">{t("how.s1t")}</h3>
+                <p className="mb-[18px] text-[16px] leading-relaxed text-[#6e6e73]">{t("how.s1b")}</p>
+                <span className="inline-flex items-center gap-1.5 text-[13.5px] font-medium text-[#6e6e73]">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <path d="M20 6L9 17l-5-5" stroke="#34c759" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  {t("how.s1tag")}
+                </span>
+                {!user && (
+                  <div className="mt-4">
+                    <Link href="/sign-up" className="inline-flex items-center gap-1 text-sm font-medium text-[#0066cc] hover:underline">
+                      {t("nav.getStarted")} <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              {/* Step 2 */}
+              <div className="border-t border-black/[0.12] px-0 py-9 lg:border-l lg:border-t-0 lg:px-[34px] lg:py-0">
+                <div className="mb-[18px] font-mono text-[15px] font-semibold text-[#0066cc]">02</div>
+                <h3 className="mb-2.5 text-[21px] font-semibold tracking-[-0.02em]">{t("how.s2t")}</h3>
+                <p className="mb-[18px] text-[16px] leading-relaxed text-[#6e6e73]">{t("how.s2b")}</p>
+                <div className="relative rounded-2xl bg-[#f5f5f7] p-4 pb-[15px] pt-9 font-mono text-[12.5px] leading-relaxed text-[#3a3a3c]">
+                  <LandingCopyButton
+                    text={t("how.prompt")}
+                    label={t("how.copy")}
+                    copiedLabel={t("how.copied")}
+                  />
+                  <span className="whitespace-pre-wrap break-words">{t("how.prompt")}</span>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div className="border-t border-black/[0.12] px-0 py-9 lg:border-l lg:border-t-0 lg:pl-[34px] lg:pr-0 lg:py-0">
+                <div className="mb-[18px] font-mono text-[15px] font-semibold text-[#0066cc]">03</div>
+                <h3 className="mb-2.5 text-[21px] font-semibold tracking-[-0.02em]">{t("how.s3t")}</h3>
+                <p className="mb-[18px] text-[16px] leading-relaxed text-[#6e6e73]">{t("how.s3b")}</p>
+                <span className="inline-flex items-center gap-1.5 text-[13.5px] font-medium text-[#6e6e73]">
+                  <Zap className="h-3.5 w-3.5 fill-[#34c759] text-[#34c759]" />
+                  {t("how.s3tag")}
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Boss band */}
+        <section className="pb-[132px]">
+          <div className="mx-auto max-w-[1024px] px-7">
+            <div className="grid items-center gap-14 rounded-[30px] bg-black p-[72px] text-left lg:grid-cols-[1.3fr_1fr] max-lg:p-11">
+              <div>
+                <div className="mb-4 text-[15px] font-semibold text-[#5e9eff]">{t("boss.eyebrow")}</div>
+                <h2 className="mb-[18px] text-[clamp(28px,3.4vw,40px)] font-semibold leading-[1.12] tracking-[-0.026em] text-white">
+                  {t("boss.title")}
+                </h2>
+                <p className="text-[19px] leading-relaxed text-[#a1a1a6]">{t("boss.body")}</p>
+              </div>
+              <div className="border-t border-white/[0.16] pt-9 text-center lg:border-l lg:border-t-0 lg:pl-[52px] lg:pt-0">
+                <div className="text-[clamp(52px,8vw,84px)] font-semibold leading-none tracking-[-0.035em] text-white">
+                  {t("boss.stat")}
+                </div>
+                <div className="mt-3.5 text-[15px] leading-snug text-[#a1a1a6]">{t("boss.lab")}</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Privacy */}
+        <section className="border-t border-black/[0.09] py-[120px]">
+          <div className="mx-auto max-w-[1024px] px-7">
+            <div className="mx-auto max-w-[680px] text-center">
+              <div className="mx-auto mb-[22px] flex h-[52px] w-[52px] items-center justify-center rounded-full bg-[rgba(52,199,89,0.1)]">
+                <Shield className="h-6 w-6 text-[#34c759]" />
+              </div>
+              <h3 className="mb-3 text-[26px] font-semibold tracking-[-0.022em]">{t("priv.title")}</h3>
+              <p className="mx-auto max-w-[46ch] text-[18px] leading-relaxed text-[#6e6e73]">{t("priv.body")}</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Final CTA */}
+        <section className="border-t border-black/[0.09] py-[140px] text-center">
+          <div className="mx-auto max-w-[1024px] px-7">
+            <h2 className="mx-auto mb-5 max-w-[16ch] text-balance text-[clamp(34px,5vw,60px)] font-semibold leading-[1.05] tracking-[-0.03em]">
+              {t("final.title")}
+            </h2>
+            <p className="mb-8 text-[20px] text-[#6e6e73]">{t("final.sub")}</p>
+            {user ? (
+              <Button asChild size="lg" className="rounded-full bg-[#0066cc] px-7 text-[17px] hover:bg-[#0071e3]">
+                <Link href="/dashboard">{t("final.goToDashboard")}</Link>
+              </Button>
+            ) : (
+              <Button asChild size="lg" className="rounded-full bg-[#0066cc] px-7 text-[17px] hover:bg-[#0071e3]">
+                <Link href="/sign-up">{t("final.cta")}</Link>
+              </Button>
+            )}
           </div>
         </section>
       </main>
 
-      <footer className="border-t px-6 py-6 text-center text-sm text-muted-foreground">
-        DevPulse AI · {t("footer.tagline")}
+      <footer className="border-t border-black/[0.09] py-8 text-center text-[13px] text-[#86868b]">
+        {t("footer")}
       </footer>
-    </div>
-  );
-}
-
-function Step({
-  n,
-  icon,
-  title,
-  body,
-  code,
-  cta,
-}: {
-  n: number;
-  icon: React.ReactNode;
-  title: string;
-  body: string;
-  code?: string;
-  cta?: { label: string; href: string };
-}) {
-  return (
-    <li className="relative flex flex-col rounded-xl border bg-background p-5 text-left shadow-sm">
-      <span className="absolute -top-2.5 left-4 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-        {n}
-      </span>
-      <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-        {icon}
-      </div>
-      <h3 className="font-medium">{title}</h3>
-      <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted-foreground">{body}</p>
-      {code && (
-        <code className="mt-3 block whitespace-pre-wrap rounded-md border bg-muted/60 px-2.5 py-1.5 font-mono text-xs">
-          {code}
-        </code>
-      )}
-      {cta && (
-        <Link
-          href={cta.href}
-          className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-        >
-          {cta.label}
-          <ArrowRight className="h-3.5 w-3.5" />
-        </Link>
-      )}
-    </li>
-  );
-}
-
-function Feature({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
-  return (
-    <div className="rounded-xl border bg-background p-5 text-left">
-      <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-        {icon}
-      </div>
-      <h3 className="font-medium">{title}</h3>
-      <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{body}</p>
     </div>
   );
 }
