@@ -12,7 +12,8 @@
       "goToDashboard": "Go to dashboard",
       "createAccount": "Create free account",
       "haveAccount": "I already have an account",
-      "flow": "Account first → create or join a team → then connect the CLI on your machine."
+      "flow": "Account first → create or join a team → then connect the CLI on your machine.",
+      "toolsLabel": "Supports mainstream AI coding tools"
     },
     "how": {
       "eyebrow": "How it works",

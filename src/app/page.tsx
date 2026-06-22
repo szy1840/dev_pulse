@@ -66,15 +66,18 @@ export default async function Home() {
             {t("hero.subhead")}
           </p>
 
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-            {TOOLS.map((t) => (
-              <span
-                key={t}
-                className="rounded-md border bg-background px-2.5 py-1 text-xs text-muted-foreground"
-              >
-                {t}
-              </span>
-            ))}
+          <div className="mt-4 flex flex-col items-center gap-2">
+            <span className="text-xs text-muted-foreground">{t("hero.toolsLabel")}</span>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {TOOLS.map((tool) => (
+                <span
+                  key={tool}
+                  className="rounded-md border bg-background px-2.5 py-1 text-xs text-muted-foreground"
+                >
+                  {tool}
+                </span>
+              ))}
+            </div>
           </div>
 
           <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
