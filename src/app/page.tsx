@@ -4,6 +4,7 @@ import { getTranslations, getLocale } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { LandingCopyButton } from "@/components/landing-copy-button";
+import { LandingShowcase } from "@/components/landing-showcase";
 import { getCurrentUser } from "@/lib/auth";
 
 const BOARD_ROWS = {
@@ -33,13 +34,13 @@ export default async function Home() {
   const rows = BOARD_ROWS[locale as keyof typeof BOARD_ROWS] ?? BOARD_ROWS.en;
 
   const SLIDES = [
-    { tab: t("show.s1tab"), title: t("show.s1t"), desc: t("show.s1d") },
-    { tab: t("show.s2tab"), title: t("show.s2t"), desc: t("show.s2d") },
-    { tab: t("show.s3tab"), title: t("show.s3t"), desc: t("show.s3d") },
-    { tab: t("show.s4tab"), title: t("show.s4t"), desc: t("show.s4d") },
-    { tab: t("show.s5tab"), title: t("show.s5t"), desc: t("show.s5d") },
-    { tab: t("show.s6tab"), title: t("show.s6t"), desc: t("show.s6d") },
-    { tab: t("show.s7tab"), title: t("show.s7t"), desc: t("show.s7d") },
+    { tab: t("show.s1tab"), title: t("show.s1t"), desc: t("show.s1d"), img: "/screenshots/overview.jpg" },
+    { tab: t("show.s2tab"), title: t("show.s2t"), desc: t("show.s2d"), img: "/screenshots/ranking.jpg" },
+    { tab: t("show.s3tab"), title: t("show.s3t"), desc: t("show.s3d"), img: "/screenshots/summary.jpg" },
+    { tab: t("show.s4tab"), title: t("show.s4t"), desc: t("show.s4d"), img: "/screenshots/sessions.jpg" },
+    { tab: t("show.s5tab"), title: t("show.s5t"), desc: t("show.s5d"), img: "/screenshots/insights.jpg" },
+    { tab: t("show.s6tab"), title: t("show.s6t"), desc: t("show.s6d"), img: "/screenshots/hours.jpg" },
+    { tab: t("show.s7tab"), title: t("show.s7t"), desc: t("show.s7d"), img: "/screenshots/cost.jpg" },
   ];
 
   return (
@@ -228,17 +229,7 @@ export default async function Home() {
               </h2>
               <p className="mt-4 text-[19px] leading-snug tracking-[-0.01em] text-[#6e6e73]">{t("show.sub")}</p>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {SLIDES.map((s, i) => (
-                <div key={i} className="rounded-2xl border border-black/[0.09] bg-[#fafafc] p-6">
-                  <span className="mb-3 inline-block rounded-full bg-[#0066cc]/10 px-2.5 py-0.5 text-[12px] font-semibold text-[#0066cc]">
-                    {s.tab}
-                  </span>
-                  <h3 className="mb-2 text-[17px] font-semibold leading-snug tracking-[-0.02em]">{s.title}</h3>
-                  <p className="text-[14.5px] leading-relaxed text-[#6e6e73]">{s.desc}</p>
-                </div>
-              ))}
-            </div>
+            <LandingShowcase slides={SLIDES} />
           </div>
         </section>
 
