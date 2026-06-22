@@ -50,7 +50,8 @@ export default async function MembersPage({
   const t = await getTranslations("members");
   const params = await searchParams;
   const timeZone = await getViewerTimezone(userId);
-  const range = resolveRange(params.view ?? params.period, params.anchor, timeZone);
+  const locale = (await getLocale()) as Locale;
+  const range = resolveRange(params.view ?? params.period, params.anchor, timeZone, locale);
   const [members, periodSessions] = await Promise.all([
     getMemberActivity(team.id, range),
     getSessionsForSummary(team.id, range),
@@ -65,7 +66,6 @@ export default async function MembersPage({
   }
 
   // Generate (or read cached) period summaries per member in parallel.
-  const locale = (await getLocale()) as Locale;
   const periodSummaries = new Map(
     await Promise.all(
       members.map(async (m) => [

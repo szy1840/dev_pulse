@@ -83,9 +83,9 @@ export function startOfDayInTimezone(d = new Date(), timeZone: string): Date {
 }
 
 /** Human-readable label for a calendar day in the given timezone. */
-export function formatDayLabel(day: string, timeZone: string): string {
+export function formatDayLabel(day: string, timeZone: string, locale = "en"): string {
   const noon = new Date(startOfDayFromDayKey(day, timeZone).getTime() + 12 * 3600 * 1000);
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(locale === "zh" ? "zh-CN" : "en-US", {
     timeZone,
     weekday: "long",
     month: "short",

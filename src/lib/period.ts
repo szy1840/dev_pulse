@@ -3,6 +3,7 @@ import {
   startOfDayFromDayKey,
   formatDayLabel,
 } from "@/lib/timezone";
+import type { Locale } from "@/lib/locale";
 
 /**
  * Calendar-period navigation model. Replaces the rolling today/7d/30d windows:
@@ -34,6 +35,31 @@ export interface PeriodRange {
 }
 
 const DAY_MS = 24 * 3600 * 1000;
+
+const PERIOD_LABELS: Record<Locale, Record<string, string>> = {
+  en: {
+    allTime: "All time",
+    today: "Today",
+    thisWeek: "This week",
+    thisMonth: "This month",
+    vsPrevDay: "vs prev day",
+    vsPrevWeek: "vs prev week",
+    vsPrevMonth: "vs prev month",
+  },
+  zh: {
+    allTime: "全部时间",
+    today: "今日",
+    thisWeek: "本周",
+    thisMonth: "本月",
+    vsPrevDay: "较上日",
+    vsPrevWeek: "较上周",
+    vsPrevMonth: "较上月",
+  },
+};
+
+function labels(locale: Locale) {
+  return PERIOD_LABELS[locale] ?? PERIOD_LABELS.en;
+}
 
 /** Day key shifted by n calendar days (noon-instant arithmetic is DST-safe). */
 function addDays(day: string, n: number, timeZone: string): string {
@@ -69,9 +95,9 @@ function isValidDayKey(s: string | undefined): s is string {
   return Boolean(s && /^\d{4}-\d{2}-\d{2}$/.test(s));
 }
 
-function monthDayLabel(day: string, timeZone: string, withYear = false): string {
+function monthDayLabel(day: string, timeZone: string, locale: Locale, withYear = false): string {
   const noon = new Date(startOfDayFromDayKey(day, timeZone).getTime() + 12 * 3600 * 1000);
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(locale === "zh" ? "zh-CN" : "en-US", {
     timeZone,
     month: "short",
     day: "numeric",
@@ -79,11 +105,15 @@ function monthDayLabel(day: string, timeZone: string, withYear = false): string 
   }).format(noon);
 }
 
-function monthLabel(monthStartDay: string, timeZone: string): string {
+function monthLabel(monthStartDay: string, timeZone: string, locale: Locale): string {
   const noon = new Date(
     startOfDayFromDayKey(monthStartDay, timeZone).getTime() + 12 * 3600 * 1000
   );
-  return new Intl.DateTimeFormat("en-US", { timeZone, month: "long", year: "numeric" }).format(noon);
+  return new Intl.DateTimeFormat(locale === "zh" ? "zh-CN" : "en-US", {
+    timeZone,
+    month: "long",
+    year: "numeric",
+  }).format(noon);
 }
 
 /**
@@ -94,8 +124,11 @@ function monthLabel(monthStartDay: string, timeZone: string): string {
 export function resolveRange(
   viewParam: string | undefined,
   anchorParam: string | undefined,
-  timeZone: string
+  timeZone: string,
+  locale: Locale = "en"
 ): PeriodRange {
+  const L = labels(locale);
+
   // Legacy mapping: today→day, 7d→week, 30d→month.
   const view: ViewGranularity =
     viewParam === "day" || viewParam === "today"
@@ -116,9 +149,9 @@ export function resolveRange(
       anchor: "",
       start: null,
       end: null,
-      label: "All time",
+      label: L.allTime,
       phrase: "across all time",
-      shortLabel: "All time",
+      shortLabel: L.allTime,
       isCurrent: true,
       prevAnchor: null,
       nextAnchor: null,
@@ -133,7 +166,7 @@ export function resolveRange(
     const isCurrent = anchor === today;
     const start = startOfDayFromDayKey(anchor, timeZone);
     const end = startOfDayFromDayKey(addDays(anchor, 1, timeZone), timeZone);
-    const label = formatDayLabel(anchor, timeZone);
+    const label = formatDayLabel(anchor, timeZone, locale);
     return {
       view,
       anchor,
@@ -141,7 +174,7 @@ export function resolveRange(
       end,
       label,
       phrase: isCurrent ? "today" : `on ${label}`,
-      shortLabel: isCurrent ? "Today" : monthDayLabel(anchor, timeZone),
+      shortLabel: isCurrent ? L.today : monthDayLabel(anchor, timeZone, locale),
       isCurrent,
       prevAnchor: addDays(anchor, -1, timeZone),
       nextAnchor: isCurrent ? null : addDays(anchor, 1, timeZone),
@@ -155,17 +188,17 @@ export function resolveRange(
     const last = addDays(anchor, 6, timeZone);
     const start = startOfDayFromDayKey(anchor, timeZone);
     const end = startOfDayFromDayKey(addDays(anchor, 7, timeZone), timeZone);
-    const label = `${monthDayLabel(anchor, timeZone)} – ${monthDayLabel(last, timeZone, true)}`;
+    const label = `${monthDayLabel(anchor, timeZone, locale)} – ${monthDayLabel(last, timeZone, locale, true)}`;
     return {
       view,
       anchor,
       start,
       end,
       label,
-      phrase: isCurrent ? "this week" : `the week of ${monthDayLabel(anchor, timeZone, true)}`,
+      phrase: isCurrent ? "this week" : `the week of ${monthDayLabel(anchor, timeZone, locale, true)}`,
       shortLabel: isCurrent
-        ? "This week"
-        : `${monthDayLabel(anchor, timeZone)} – ${monthDayLabel(last, timeZone)}`,
+        ? L.thisWeek
+        : `${monthDayLabel(anchor, timeZone, locale)} – ${monthDayLabel(last, timeZone, locale)}`,
       isCurrent,
       prevAnchor: addDays(anchor, -7, timeZone),
       nextAnchor: isCurrent ? null : addDays(anchor, 7, timeZone),
@@ -179,7 +212,7 @@ export function resolveRange(
   const nextStart = addMonths(anchor, 1);
   const start = startOfDayFromDayKey(anchor, timeZone);
   const end = startOfDayFromDayKey(nextStart, timeZone);
-  const label = monthLabel(anchor, timeZone);
+  const label = monthLabel(anchor, timeZone, locale);
   return {
     view: "month",
     anchor,
@@ -187,7 +220,7 @@ export function resolveRange(
     end,
     label,
     phrase: isCurrent ? "this month" : `in ${label}`,
-    shortLabel: isCurrent ? "This month" : label,
+    shortLabel: isCurrent ? L.thisMonth : label,
     isCurrent,
     prevAnchor: addMonths(anchor, -1),
     nextAnchor: isCurrent ? null : nextStart,
@@ -201,24 +234,24 @@ export interface QueryRange {
 }
 
 /**
- * Bounds of the period immediately before `range`, for period-over-period
- * comparisons. Null for all-time (nothing to compare against).
+ * Bounds of the period immediately before `range`, for a timeZone.
  */
-export function previousQueryRange(range: PeriodRange, timeZone: string): QueryRange | null {
+export function previousQueryRange(range: PeriodRange, timeZone: string, locale: Locale = "en"): QueryRange | null {
   if (range.view === "all" || !range.prevAnchor) return null;
-  const prev = resolveRange(range.view, range.prevAnchor, timeZone);
+  const prev = resolveRange(range.view, range.prevAnchor, timeZone, locale);
   return { start: prev.start, end: prev.end };
 }
 
-/** Short label for delta hints, e.g. "vs prev day". */
-export function previousPeriodWord(view: ViewGranularity): string {
+/** Short label for delta hints, e.g. "vs prev day" / "较上日". */
+export function previousPeriodWord(view: ViewGranularity, locale: Locale = "en"): string {
+  const L = labels(locale);
   switch (view) {
     case "day":
-      return "vs prev day";
+      return L.vsPrevDay;
     case "week":
-      return "vs prev week";
+      return L.vsPrevWeek;
     case "month":
-      return "vs prev month";
+      return L.vsPrevMonth;
     case "all":
       return "";
   }

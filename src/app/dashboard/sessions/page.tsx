@@ -1,5 +1,5 @@
 import { Cpu, Wrench } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { requireUserId, getActiveTeam, getViewerTimezone } from "@/lib/auth";
 import { getRecentSessions, getModelBreakdown, getToolBreakdown } from "@/lib/queries";
 import { resolveRange } from "@/lib/period";
@@ -23,7 +23,8 @@ export default async function SessionsPage({
 
   const params = await searchParams;
   const timeZone = await getViewerTimezone(userId);
-  const range = resolveRange(params.view ?? params.period, params.anchor, timeZone);
+  const locale = await getLocale();
+  const range = resolveRange(params.view ?? params.period, params.anchor, timeZone, locale);
   const [rows, models, tools] = await Promise.all([
     getRecentSessions(team.id, range, 500),
     getModelBreakdown(team.id, range),

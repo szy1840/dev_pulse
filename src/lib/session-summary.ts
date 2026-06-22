@@ -13,7 +13,8 @@ const SYSTEM =
   "You write a single concise summary of one engineer's AI coding session for a team dashboard. " +
   "State what they worked on, fixed, or asked the agent to do — concrete engineering outcomes only. " +
   "Ignore sender metadata, JSON blobs, usernames, token counts, and tool internals. " +
-  "One plain sentence, no markdown, no quotes, max 200 characters.";
+  "One plain sentence, no markdown, no quotes, max 200 characters. " +
+  "Write in the same language as the source messages (Chinese output when the source is Chinese, otherwise English).";
 
 export type SessionSummaryInput = {
   tool: string;

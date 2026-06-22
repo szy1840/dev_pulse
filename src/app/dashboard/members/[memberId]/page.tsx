@@ -12,7 +12,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { requireUserId, getActiveTeam, getViewerTimezone } from "@/lib/auth";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { Suspense } from "react";
 import {
   getTeamMemberProfile,
@@ -67,9 +67,10 @@ export default async function MemberDetailPage({
 
   const sp = await searchParams;
   const timeZone = await getViewerTimezone(userId);
-  const range = resolveRange(sp.view ?? sp.period, sp.anchor, timeZone);
+  const locale = await getLocale();
+  const range = resolveRange(sp.view ?? sp.period, sp.anchor, timeZone, locale);
   const granularity = range.view === "day" ? "hour" : "day";
-  const prevRange = previousQueryRange(range, timeZone);
+  const prevRange = previousQueryRange(range, timeZone, locale);
 
   const [stats, prevStats, daily, models, tools, projects, heatmap, sessions] =
     await Promise.all([
@@ -86,7 +87,7 @@ export default async function MemberDetailPage({
   const memberName = member.name ?? t("memberFallback");
 
   const totalTokens = stats.inputTokens + stats.outputTokens;
-  const deltaWord = previousPeriodWord(range.view);
+  const deltaWord = previousPeriodWord(range.view, locale);
   const deltaFor = (current: number, previous: number | undefined) =>
     prevStats && previous !== undefined ? { current, previous, word: deltaWord } : undefined;
 

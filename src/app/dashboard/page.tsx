@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { Activity, Clock, Cpu, Layers, Users, Wrench, FolderGit2 } from "lucide-react";
 import { requireUserId, getActiveTeam, getViewerTimezone } from "@/lib/auth";
 import {
@@ -57,10 +57,11 @@ export default async function OverviewPage({
 
   const params = await searchParams;
   const timeZone = await getViewerTimezone(userId);
-  const range = resolveRange(params.view ?? params.period, params.anchor, timeZone);
+  const locale = await getLocale();
+  const range = resolveRange(params.view ?? params.period, params.anchor, timeZone, locale);
   const activityGranularity = range.view === "day" ? "hour" : "day";
 
-  const prevRange = previousQueryRange(range, timeZone);
+  const prevRange = previousQueryRange(range, timeZone, locale);
   const [stats, prevStats, dailyActivity, models, tools, projects, heatmap, commitCosts] =
     await Promise.all([
       getTeamStats(team.id, range),
@@ -74,7 +75,7 @@ export default async function OverviewPage({
     ]);
 
   const totalTokens = stats.inputTokens + stats.outputTokens;
-  const deltaWord = previousPeriodWord(range.view);
+  const deltaWord = previousPeriodWord(range.view, locale);
   const deltaFor = (current: number, previous: number | undefined) =>
     prevStats && previous !== undefined ? { current, previous, word: deltaWord } : undefined;
   const daily = dailyActivity.team;
