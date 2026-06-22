@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Shield, Zap } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 import { LocaleSwitcher } from "@/components/locale-switcher";
@@ -102,7 +102,7 @@ export default async function Home() {
                     </Button>
                     <Link href="#how" className="inline-flex items-center gap-1 text-[17px] font-medium text-[#0066cc] hover:underline">
                       {t("hero.cta2")}
-                      <ArrowRight className="h-4 w-4" />
+                      <svg width="7" height="11" viewBox="0 0 7 11" fill="none"><path d="M1 1l4.5 4.5L1 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </Link>
                   </>
                 )}
@@ -120,7 +120,7 @@ export default async function Home() {
 
             {/* Board mockup */}
             <div className="relative mx-auto mt-16 max-w-[880px] px-1">
-              <div className="absolute inset-[8%_8%_-4%] -z-10 bg-[radial-gradient(closest-side,rgba(0,102,204,0.16),transparent_78%)] blur-[46px]" />
+              <div className="absolute -z-10 blur-[46px]" style={{ left:"8%",right:"8%",top:"14%",bottom:"-4%", background:"radial-gradient(closest-side,rgba(0,102,204,0.16),transparent 78%)" }} />
               <div className="relative z-10 rounded-3xl border border-black/[0.09] bg-white p-6 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.18),0_8px_24px_-12px_rgba(0,0,0,0.12)]">
                 <div className="mb-4 flex items-center justify-between border-b border-black/[0.05] pb-3.5">
                   <div>
@@ -201,17 +201,25 @@ export default async function Home() {
             </div>
             <div className="grid grid-cols-1 gap-x-[72px] gap-y-0 sm:grid-cols-2">
               {[
-                { t: t("val.c1t"), b: t("val.c1b"), icon: "M3 17l5-5 4 4 8-9" },
-                { t: t("val.c2t"), b: t("val.c2b"), icon: "M3 4h13v16M8 9h6M8 13h4M18 8h3v12a2 2 0 0 1-2 2H9" },
-                { t: t("val.c3t"), b: t("val.c3b"), icon: "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" },
-                { t: t("val.c4t"), b: t("val.c4b"), icon: "M13 2L4 14h6l-1 8 9-12h-6l1-8z" },
+                {
+                  t: t("val.c1t"), b: t("val.c1b"),
+                  svg: <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M3 17l5-5 4 4 8-9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/><circle cx="20" cy="7" r="1.8" fill="currentColor"/></svg>,
+                },
+                {
+                  t: t("val.c2t"), b: t("val.c2b"),
+                  svg: <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="13" height="16" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M8 9h6M8 13h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M18 8h3v12a2 2 0 0 1-2 2H9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>,
+                },
+                {
+                  t: t("val.c3t"), b: t("val.c3b"),
+                  svg: <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" stroke="currentColor" strokeWidth="1.8"/><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8"/></svg>,
+                },
+                {
+                  t: t("val.c4t"), b: t("val.c4b"),
+                  svg: <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg>,
+                },
               ].map((feat) => (
                 <div key={feat.t} className="border-t border-black/[0.12] py-[34px]">
-                  <div className="mb-[18px]">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                      <path d={feat.icon} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </div>
+                  <div className="mb-[18px]">{feat.svg}</div>
                   <h3 className="mb-2.5 text-[23px] font-semibold leading-snug tracking-[-0.02em]">{feat.t}</h3>
                   <p className="max-w-[42ch] text-[16.5px] leading-relaxed text-[#6e6e73]">{feat.b}</p>
                 </div>
@@ -258,7 +266,7 @@ export default async function Home() {
                 {!user && (
                   <div className="mt-4">
                     <Link href="/sign-up" className="inline-flex items-center gap-1 text-sm font-medium text-[#0066cc] hover:underline">
-                      {t("nav.getStarted")} <ArrowRight className="h-3.5 w-3.5" />
+                      {t("nav.getStarted")} <svg width="7" height="11" viewBox="0 0 7 11" fill="none"><path d="M1 1l4.5 4.5L1 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </Link>
                   </div>
                 )}
@@ -285,7 +293,7 @@ export default async function Home() {
                 <h3 className="mb-2.5 text-[21px] font-semibold tracking-[-0.02em]">{t("how.s3t")}</h3>
                 <p className="mb-[18px] text-[16px] leading-relaxed text-[#6e6e73]">{t("how.s3b")}</p>
                 <span className="inline-flex items-center gap-1.5 text-[13.5px] font-medium text-[#6e6e73]">
-                  <Zap className="h-3.5 w-3.5 fill-[#34c759] text-[#34c759]" />
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" fill="#34c759"/></svg>
                   {t("how.s3tag")}
                 </span>
               </div>
@@ -319,7 +327,7 @@ export default async function Home() {
           <div className="mx-auto max-w-[1024px] px-7">
             <div className="mx-auto max-w-[680px] text-center">
               <div className="mx-auto mb-[22px] flex h-[52px] w-[52px] items-center justify-center rounded-full bg-[rgba(52,199,89,0.1)]">
-                <Shield className="h-6 w-6 text-[#34c759]" />
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 2l8 3v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V5l8-3z" stroke="#34c759" strokeWidth="2" strokeLinejoin="round"/><path d="M9 12l2 2 4-4" stroke="#34c759" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </div>
               <h3 className="mb-3 text-[26px] font-semibold tracking-[-0.022em]">{t("priv.title")}</h3>
               <p className="mx-auto max-w-[46ch] text-[18px] leading-relaxed text-[#6e6e73]">{t("priv.body")}</p>

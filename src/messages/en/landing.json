@@ -37,7 +37,7 @@
     },
     "show": {
       "title": "Here's what you'll see inside",
-      "sub": "Seven views that give you complete visibility into how your team works with AI.",
+      "sub": "Real product screens. Tap the tabs to flip through.",
       "s1tab": "Overview", "s1t": "Your team's AI at a glance", "s1d": "Sessions, tokens, active people and active time, plus the daily trend. All on one screen.",
       "s2tab": "Leaderboard", "s2t": "See who uses AI the most", "s2d": "Ranked by sessions, tokens and active time, so people compete and learn from each other.",
       "s3tab": "Summary", "s3t": "AI writes the monthly recap for you", "s3d": "Auto-generated summaries for the team and every member, so you never have to ask around.",
