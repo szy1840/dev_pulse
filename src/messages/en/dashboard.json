@@ -44,7 +44,7 @@
       "topProjectsDesc": "Busiest projects by sessions",
       "topProjectsValueLabel": "Sessions",
       "topProjectsSubLabel": "Tokens",
-      "heatmapTitle": "When the team codes",
+      "heatmapTitle": "Team AI working hours",
       "heatmapDesc": "Sessions by weekday and hour — all team or one member"
     },
     "commitCosts": {

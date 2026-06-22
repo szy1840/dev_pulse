@@ -44,7 +44,7 @@
       "topProjectsDesc": "按会话数排名最活跃的项目",
       "topProjectsValueLabel": "会话",
       "topProjectsSubLabel": "Token",
-      "heatmapTitle": "团队编程时段",
+      "heatmapTitle": "团队 AI 工作时间",
       "heatmapDesc": "按星期与小时统计的会话 — 全团队或单个成员"
     },
     "commitCosts": {
