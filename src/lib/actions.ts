@@ -6,6 +6,7 @@ import { clearAuthCookies } from "@insforge/sdk/ssr";
 import { getAdmin } from "@/lib/insforge/admin";
 import {
   requireUserId,
+  getCurrentUser,
   syncProfile,
   requireMembership,
   getMyTeams,
@@ -278,12 +279,15 @@ export async function updateLocale(locale: string): Promise<ActionResult> {
   (await cookies()).set(LOCALE_COOKIE, locale, LOCALE_COOKIE_OPTS);
 
   // Best-effort durable store so the choice follows the user across devices.
-  const userId = await requireUserId();
-  const admin = getAdmin();
-  await admin.database
-    .from("profiles")
-    .update({ locale, updated_at: new Date().toISOString() })
-    .eq("id", userId);
+  // Unauthenticated visitors only get the cookie; no profile write needed.
+  const user = await getCurrentUser();
+  if (user) {
+    const admin = getAdmin();
+    await admin.database
+      .from("profiles")
+      .update({ locale, updated_at: new Date().toISOString() })
+      .eq("id", user.id);
+  }
 
   revalidatePath("/", "layout");
   return { ok: true };
