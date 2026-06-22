@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
+import type { Locale } from "@/lib/locale";
 import { Activity, Clock, Cpu, Layers, Users, Wrench, FolderGit2 } from "lucide-react";
 import { requireUserId, getActiveTeam, getViewerTimezone } from "@/lib/auth";
 import {
@@ -57,7 +58,7 @@ export default async function OverviewPage({
 
   const params = await searchParams;
   const timeZone = await getViewerTimezone(userId);
-  const locale = await getLocale();
+  const locale = (await getLocale()) as Locale;
   const range = resolveRange(params.view ?? params.period, params.anchor, timeZone, locale);
   const activityGranularity = range.view === "day" ? "hour" : "day";
 

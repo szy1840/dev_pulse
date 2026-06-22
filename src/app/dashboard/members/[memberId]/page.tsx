@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { requireUserId, getActiveTeam, getViewerTimezone } from "@/lib/auth";
 import { getTranslations, getLocale } from "next-intl/server";
+import type { Locale } from "@/lib/locale";
 import { Suspense } from "react";
 import {
   getTeamMemberProfile,
@@ -67,7 +68,7 @@ export default async function MemberDetailPage({
 
   const sp = await searchParams;
   const timeZone = await getViewerTimezone(userId);
-  const locale = await getLocale();
+  const locale = (await getLocale()) as Locale;
   const range = resolveRange(sp.view ?? sp.period, sp.anchor, timeZone, locale);
   const granularity = range.view === "day" ? "hour" : "day";
   const prevRange = previousQueryRange(range, timeZone, locale);
