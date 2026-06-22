@@ -90,6 +90,8 @@
       "compactNote": "随时使用 <code>devpulse status</code> 检查配置。仅上传使用元数据——绝不上传代码或对话记录。",
       "connectTitle": "连接你的机器即可在此查看数据",
       "connectBody": "在你安装 CLI 并在笔记本上运行 <code>devpulse sync</code> 后，仪表盘将填充数据。仅上传轻量的使用元数据——绝不上传代码或对话记录。",
+      "method1Label": "方法一",
+      "method2Label": "方法二",
       "openclawTitle": "复制此提示词，让 OpenClaw 自动完成设置",
       "openclawBody": "适用于 OpenClaw，它可以替你完成浏览器登录。沙箱化的智能体（例如基于云端的）无法做到——请改用手动步骤。",
       "manualTitle": "手动设置",

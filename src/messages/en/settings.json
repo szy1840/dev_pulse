@@ -90,9 +90,11 @@
       "compactNote": "Check configuration anytime with <code>devpulse status</code>. Only usage metadata is uploaded — never code or transcripts.",
       "connectTitle": "Connect your machine to see data here",
       "connectBody": "The dashboard fills in after you install the CLI and run <code>devpulse sync</code> on your laptop. Only lightweight usage metadata is uploaded — never code or transcripts.",
+      "method1Label": "Option 1",
+      "method2Label": "Option 2",
       "openclawTitle": "Copy this prompt and let OpenClaw handle setup",
       "openclawBody": "Works with OpenClaw, which can complete the browser login for you. Sandboxed agents (e.g. cloud-based ones) can't — use the manual steps instead.",
-      "manualTitle": "Manual setup",
+      "manualTitle": "Set up manually",
       "afterSync": "After syncing, refresh the dashboard to see your data.",
       "openDashboard": "Open dashboard"
     },

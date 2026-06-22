@@ -57,7 +57,7 @@ function CopyBlock({ text, multiline = false }: { text: string; multiline?: bool
 function StepList({ className }: { className?: string }) {
   const t = useTranslations("settings");
   return (
-    <ol className={cn("space-y-4", className)}>
+    <ol className={cn("space-y-3", className)}>
       {STEPS.map(({ n, icon: Icon, command }) => (
         <li key={n} className="rounded-xl border bg-background p-4 shadow-sm">
           <div className="flex gap-3">
@@ -79,6 +79,30 @@ function StepList({ className }: { className?: string }) {
   );
 }
 
+function MethodLabel({ label, primary }: { label: string; primary?: boolean }) {
+  return (
+    <span
+      className={cn(
+        "inline-block rounded-full px-3 py-0.5 text-xs font-semibold",
+        primary
+          ? "bg-primary text-primary-foreground"
+          : "border bg-muted text-muted-foreground"
+      )}
+    >
+      {label}
+    </span>
+  );
+}
+
+function InfoBanner({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
+      <Terminal className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+      <div className="space-y-1 text-sm">{children}</div>
+    </div>
+  );
+}
+
 export function CliSetupGuide({
   className,
   showDashboardCta = false,
@@ -89,15 +113,34 @@ export function CliSetupGuide({
   compact?: boolean;
 }) {
   const t = useTranslations("settings");
-  if (compact) {
-    return (
-      <div className={cn("space-y-4", className)}>
+
+  const methods = (
+    <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+      {/* Method 1: OpenClaw */}
+      <div className="space-y-2">
+        <MethodLabel label={t("cli.method1Label")} primary />
         <section className="rounded-xl border bg-background p-4 shadow-sm">
           <h3 className="mb-1 font-medium">{t("cli.openclawTitle")}</h3>
           <p className="mb-3 text-xs text-muted-foreground">{t("cli.openclawBody")}</p>
           <CopyBlock text={t("cli.openclawPrompt")} multiline />
         </section>
-        <StepList />
+      </div>
+
+      {/* Method 2: Manual */}
+      <div className="space-y-2">
+        <MethodLabel label={t("cli.method2Label")} />
+        <div className="space-y-1">
+          <p className="px-1 text-sm font-medium text-foreground">{t("cli.manualTitle")}</p>
+          <StepList />
+        </div>
+      </div>
+    </div>
+  );
+
+  if (compact) {
+    return (
+      <div className={cn("space-y-4", className)}>
+        {methods}
         <div className="rounded-lg border bg-muted/40 p-3">
           <p className="text-xs text-muted-foreground">
             {t.rich("cli.compactNote", {
@@ -111,32 +154,18 @@ export function CliSetupGuide({
 
   return (
     <div className={cn("space-y-6", className)}>
-      <div className="flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
-        <Terminal className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-        <div className="space-y-1 text-sm">
-          <p className="font-medium">{t("cli.connectTitle")}</p>
-          <p className="text-muted-foreground">
-            {t.rich("cli.connectBody", {
-              code: (c) => (
-                <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">{c}</code>
-              ),
-            })}
-          </p>
-        </div>
-      </div>
+      {methods}
 
-      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
-        <section className="rounded-xl border bg-background p-4 shadow-sm">
-          <h3 className="mb-1 font-medium">{t("cli.openclawTitle")}</h3>
-          <p className="mb-3 text-xs text-muted-foreground">{t("cli.openclawBody")}</p>
-          <CopyBlock text={t("cli.openclawPrompt")} multiline />
-        </section>
-
-        <section className="space-y-4">
-          <h3 className="font-medium">{t("cli.manualTitle")}</h3>
-          <StepList />
-        </section>
-      </div>
+      <InfoBanner>
+        <p className="font-medium">{t("cli.connectTitle")}</p>
+        <p className="text-muted-foreground">
+          {t.rich("cli.connectBody", {
+            code: (c) => (
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">{c}</code>
+            ),
+          })}
+        </p>
+      </InfoBanner>
 
       {showDashboardCta && (
         <div className="flex flex-col items-center gap-3 border-t pt-6 sm:flex-row sm:justify-between">
