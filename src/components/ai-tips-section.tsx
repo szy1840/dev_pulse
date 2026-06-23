@@ -26,7 +26,6 @@ export async function AiTipsSection({
       <div className="mb-4 flex items-center gap-2">
         <Lightbulb className="h-4 w-4 text-amber-500" />
         <span className="text-sm font-semibold">{t("tips.title")}</span>
-        <span className="ml-auto text-xs text-muted-foreground">{t("tips.powered")}</span>
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
         {tips.map((tip, i) => (
