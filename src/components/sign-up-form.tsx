@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { insforge } from "@/lib/insforge/client";
+import { VerifyOtpStep } from "@/components/verify-otp-step";
 
 function GoogleIcon() {
   return (
@@ -34,7 +35,6 @@ export function SignUpForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [otp, setOtp] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -75,23 +75,6 @@ export function SignUpForm() {
     });
   }
 
-  function verify() {
-    setError(null);
-    startTransition(async () => {
-      const res = await fetch("/api/auth/verify-email", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, otp }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(json.error ?? t("verify.failed"));
-        return;
-      }
-      router.push("/onboarding");
-      router.refresh();
-    });
-  }
 
   return (
     <Card className="w-full max-w-sm">
@@ -175,28 +158,11 @@ export function SignUpForm() {
         ) : (
           <>
             {notice && <p className="text-sm text-muted-foreground">{notice}</p>}
-            <div className="space-y-2">
-              <Label htmlFor="otp">{t("verify.codeLabel")}</Label>
-              <Input
-                id="otp"
-                inputMode="numeric"
-                placeholder="123456"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                onKeyDown={(e) => e.key === "Enter" && verify()}
-              />
-            </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button className="w-full" onClick={verify} disabled={pending}>
-              {pending ? t("verify.submitting") : t("verify.submit")}
-            </Button>
-            <button
-              type="button"
-              className="w-full text-center text-sm text-muted-foreground underline-offset-4 hover:underline"
-              onClick={() => setStep("details")}
-            >
-              {t("verify.back")}
-            </button>
+            <VerifyOtpStep
+              email={email}
+              onSuccess={() => { router.push("/onboarding"); router.refresh(); }}
+              onBack={() => setStep("details")}
+            />
           </>
         )}
       </CardContent>
