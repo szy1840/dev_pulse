@@ -10,6 +10,10 @@
       "month": "每月团队摘要",
       "all": "全部时间团队摘要"
     },
+    "tips": {
+      "title": "AI 使用小课堂",
+      "powered": "AI 生成"
+    },
     "summaryBadges": {
       "sessions": "{count} 个会话",
       "active": "{count} 人活跃"

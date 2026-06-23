@@ -26,7 +26,8 @@ import { ActivityHeatmapPanel } from "@/components/charts/activity-heatmap-panel
 import { TokenCompositionBar } from "@/components/charts/token-composition-bar";
 import { Sparkline } from "@/components/charts/sparkline";
 import { TeamSummarySection } from "@/components/team-summary-section";
-import { SummaryCardSkeleton } from "@/components/dashboard-skeletons";
+import { AiTipsSection } from "@/components/ai-tips-section";
+import { SummaryCardSkeleton, AiTipsSkeleton } from "@/components/dashboard-skeletons";
 import { CommitCosts } from "@/components/commit-costs";
 
 function summaryHeading(
@@ -124,6 +125,12 @@ export default async function OverviewPage({
           activeMembers={stats.activeMembers}
         />
       </Suspense>
+
+      {(range.view === "week" || range.view === "month") && (
+        <Suspense key={`tips:${range.view}:${range.anchor}`} fallback={<AiTipsSkeleton />}>
+          <AiTipsSection teamId={team.id} range={range} timeZone={timeZone} />
+        </Suspense>
+      )}
 
       {/* Headline stats with sparklines */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

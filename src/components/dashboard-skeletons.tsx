@@ -78,6 +78,29 @@ export function SummaryCardSkeleton() {
   );
 }
 
+export function AiTipsSkeleton() {
+  return (
+    <div className="rounded-xl border bg-card p-5">
+      <div className="mb-4 flex items-center gap-2">
+        <Skeleton className="h-4 w-4 rounded" />
+        <Skeleton className="h-4 w-28" />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="rounded-lg bg-muted/40 p-3.5 space-y-2">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-5 w-5 rounded" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-[80%]" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function TableSkeleton({ rows = 8 }: { rows?: number }) {
   return (
     <Card>

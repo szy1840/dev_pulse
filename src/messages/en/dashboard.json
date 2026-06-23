@@ -10,6 +10,10 @@
       "month": "Monthly team summary",
       "all": "All-time team summary"
     },
+    "tips": {
+      "title": "AI Usage Tips",
+      "powered": "AI-generated"
+    },
     "summaryBadges": {
       "sessions": "{count, plural, =1 {# session} other {# sessions}}",
       "active": "{count} active"
