@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
@@ -12,9 +12,13 @@ import { Label } from "@/components/ui/label";
 
 export function SignUpForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const t = useTranslations("auth");
   const [pending, startTransition] = useTransition();
   const [step, setStep] = useState<"details" | "verify">("details");
+  const [inviteCode, setInviteCode] = useState(() =>
+    (searchParams.get("code") ?? "").toUpperCase()
+  );
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,7 +32,7 @@ export function SignUpForm() {
       const res = await fetch("/api/auth/sign-up", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, inviteCode }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -79,6 +83,16 @@ export function SignUpForm() {
       <CardContent className="space-y-4">
         {step === "details" ? (
           <>
+            <div className="space-y-2">
+              <Label htmlFor="invite-code">{t("fields.inviteCode")}</Label>
+              <Input
+                id="invite-code"
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                placeholder={t("fields.inviteCodePlaceholder")}
+                autoComplete="off"
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="name">{t("fields.name")}</Label>
               <Input
