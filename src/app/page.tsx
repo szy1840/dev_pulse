@@ -151,11 +151,11 @@ export default async function Home() {
                         </div>
                         <div className="min-w-0">
                           <div className="truncate text-[15px] font-semibold">{row.nm}</div>
-                          <div className="text-[12px] text-[#86868b]">{row.rl}</div>
+                          <div className="truncate text-[12px] text-[#86868b]">{row.rl}</div>
                         </div>
                       </div>
-                      <div className="flex shrink-0 items-center gap-4">
-                        <div className="w-[150px]">
+                      <div className="flex shrink-0 items-center gap-2 sm:gap-4">
+                        <div className="hidden sm:block w-[150px]">
                           <div className="mb-1.5 text-right text-[12.5px] text-[#86868b]">
                             <b className="text-[14px] font-semibold text-[#1d1d1f]">{row.ct}</b>{" "}
                             {t("board.unit")}
@@ -170,7 +170,10 @@ export default async function Home() {
                             />
                           </div>
                         </div>
-                        <div className="min-w-[48px] text-right text-[13px] font-semibold text-[#34c759]">
+                        <div className="sm:hidden text-right">
+                          <span className="text-[14px] font-semibold text-[#1d1d1f]">{row.ct}</span>
+                        </div>
+                        <div className="w-[44px] text-right text-[13px] font-semibold text-[#34c759]">
                           {row.up}
                         </div>
                       </div>
