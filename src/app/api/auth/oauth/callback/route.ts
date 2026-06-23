@@ -6,10 +6,11 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
-  const { code, codeVerifier, inviteCode } = (body ?? {}) as {
+  const { code, codeVerifier, inviteCode, intent } = (body ?? {}) as {
     code?: string;
     codeVerifier?: string;
     inviteCode?: string;
+    intent?: string;
   };
 
   if (!code || !codeVerifier) {
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
 
   const isNewUser = !existingProfile;
 
-  if (isNewUser) {
+  if (isNewUser && intent === "signup") {
     const requiredCodes = process.env.SIGNUP_INVITE_CODE;
     if (requiredCodes) {
       const valid = requiredCodes.split(",").map((c) => c.trim().toUpperCase());

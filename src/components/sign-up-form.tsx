@@ -39,7 +39,13 @@ export function SignUpForm() {
   const [notice, setNotice] = useState<string | null>(null);
 
   function signInWithGoogle() {
+    if (!inviteCode.trim()) {
+      setError(t("fields.inviteCodeRequired"));
+      return;
+    }
+    setError(null);
     sessionStorage.setItem("dp_pending_invite", inviteCode);
+    sessionStorage.setItem("dp_oauth_intent", "signup");
     insforge.auth.signInWithOAuth("google", {
       redirectTo: `${window.location.origin}/api/auth/callback`,
       additionalParams: { prompt: "select_account" },

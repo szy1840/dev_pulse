@@ -22,14 +22,16 @@ export default function OAuthCallbackPage() {
 
       const codeVerifier = sessionStorage.getItem(PKCE_KEY);
       const inviteCode = sessionStorage.getItem("dp_pending_invite") ?? "";
+      const intent = sessionStorage.getItem("dp_oauth_intent") ?? "signin";
       const redirectTo = sessionStorage.getItem("dp_oauth_redirect") ?? "/dashboard";
       sessionStorage.removeItem("dp_pending_invite");
+      sessionStorage.removeItem("dp_oauth_intent");
       sessionStorage.removeItem("dp_oauth_redirect");
 
       const res = await fetch("/api/auth/oauth/callback", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ code, codeVerifier, inviteCode }),
+        body: JSON.stringify({ code, codeVerifier, inviteCode, intent }),
       });
 
       const json = await res.json().catch(() => ({}));

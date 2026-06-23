@@ -29,6 +29,7 @@ export function SignInForm({ redirectTo }: { redirectTo: string }) {
 
   function signInWithGoogle() {
     sessionStorage.setItem("dp_oauth_redirect", redirectTo);
+    sessionStorage.setItem("dp_oauth_intent", "signin");
     insforge.auth.signInWithOAuth("google", {
       redirectTo: `${window.location.origin}/api/auth/callback`,
       additionalParams: { prompt: "select_account" },
