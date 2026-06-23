@@ -106,10 +106,13 @@
       "useBrowser": "Use browser timezone ({tz})"
     },
     "banner": {
-      "title": "No usage data yet — connect the CLI on your machine",
-      "body": "Install with <install></install>, then run <login></login> and <sync></sync>.",
-      "setupGuide": "Setup guide",
-      "dismiss": "Dismiss"
+      "title": "No usage data yet — connect your machine to see your AI activity here",
+      "body": "Run these three commands on your laptop. The dashboard fills in automatically once you sync.",
+      "step1": "Install",
+      "step2": "Log in",
+      "step3": "Sync",
+      "setupGuide": "Open setup guide",
+      "note": "Only lightweight usage metadata is uploaded — never code or transcripts."
     }
   }
 }

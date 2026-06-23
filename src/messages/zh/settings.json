@@ -106,10 +106,13 @@
       "useBrowser": "使用浏览器时区（{tz}）"
     },
     "banner": {
-      "title": "尚无使用数据——在你的机器上连接 CLI",
-      "body": "使用 <install></install> 安装，然后运行 <login></login> 和 <sync></sync>。",
-      "setupGuide": "设置指南",
-      "dismiss": "关闭"
+      "title": "尚无使用数据——连接你的机器即可在此查看 AI 活动数据",
+      "body": "在你的笔记本上运行以下三步命令，同步完成后仪表盘将自动填充数据。",
+      "step1": "安装",
+      "step2": "登录",
+      "step3": "同步",
+      "setupGuide": "打开设置指南",
+      "note": "仅上传轻量的使用元数据——绝不上传代码或对话记录。"
     }
   }
 }
