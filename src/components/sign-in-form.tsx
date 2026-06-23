@@ -26,6 +26,11 @@ export function SignInForm({ redirectTo }: { redirectTo: string }) {
   const router = useRouter();
   const t = useTranslations("auth");
   const [pending, startTransition] = useTransition();
+  const [step, setStep] = useState<"credentials" | "verify">("credentials");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   function signInWithGoogle() {
     sessionStorage.setItem("dp_oauth_redirect", redirectTo);
@@ -35,9 +40,6 @@ export function SignInForm({ redirectTo }: { redirectTo: string }) {
       additionalParams: { prompt: "select_account" },
     });
   }
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
 
   function submit() {
     setError(null);
@@ -48,11 +50,33 @@ export function SignInForm({ redirectTo }: { redirectTo: string }) {
         body: JSON.stringify({ email, password }),
       });
       const json = await res.json().catch(() => ({}));
+      if (json.requireEmailVerification) {
+        setStep("verify");
+        return;
+      }
       if (!res.ok) {
         setError(json.error ?? t("signIn.failed"));
         return;
       }
       router.push(redirectTo);
+      router.refresh();
+    });
+  }
+
+  function verify() {
+    setError(null);
+    startTransition(async () => {
+      const res = await fetch("/api/auth/verify-email", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email, otp }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(json.error ?? t("verify.failed"));
+        return;
+      }
+      router.push("/onboarding");
       router.refresh();
     });
   }
@@ -63,54 +87,85 @@ export function SignInForm({ redirectTo }: { redirectTo: string }) {
         <div className="mx-auto flex items-center gap-2 font-semibold">
           <Activity className="h-5 w-5" /> DevPulse AI
         </div>
-        <CardTitle>{t("signIn.title")}</CardTitle>
-        <CardDescription>{t("signIn.subtitle")}</CardDescription>
+        <CardTitle>{step === "credentials" ? t("signIn.title") : t("verify.title")}</CardTitle>
+        <CardDescription>
+          {step === "credentials" ? t("signIn.subtitle") : t("verify.subtitle", { email })}
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="email">{t("fields.email")}</Label>
-          <Input
-            id="email"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && submit()}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="password">{t("fields.password")}</Label>
-          <Input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && submit()}
-          />
-        </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button className="w-full" onClick={submit} disabled={pending}>
-          {pending ? t("signIn.submitting") : t("signIn.submit")}
-        </Button>
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">{t("signIn.orDivider")}</span>
-          </div>
-        </div>
-        <Button type="button" variant="outline" className="w-full" onClick={signInWithGoogle}>
-          <GoogleIcon />
-          {t("signIn.continueWithGoogle")}
-        </Button>
-        <p className="text-center text-sm text-muted-foreground">
-          {t("signIn.noAccount")}{" "}
-          <Link href="/sign-up" className="font-medium text-foreground underline-offset-4 hover:underline">
-            {t("signIn.createOne")}
-          </Link>
-        </p>
+        {step === "credentials" ? (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="email">{t("fields.email")}</Label>
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && submit()}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">{t("fields.password")}</Label>
+              <Input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && submit()}
+              />
+            </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <Button className="w-full" onClick={submit} disabled={pending}>
+              {pending ? t("signIn.submitting") : t("signIn.submit")}
+            </Button>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">{t("signIn.orDivider")}</span>
+              </div>
+            </div>
+            <Button type="button" variant="outline" className="w-full" onClick={signInWithGoogle}>
+              <GoogleIcon />
+              {t("signIn.continueWithGoogle")}
+            </Button>
+            <p className="text-center text-sm text-muted-foreground">
+              {t("signIn.noAccount")}{" "}
+              <Link href="/sign-up" className="font-medium text-foreground underline-offset-4 hover:underline">
+                {t("signIn.createOne")}
+              </Link>
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="otp">{t("verify.codeLabel")}</Label>
+              <Input
+                id="otp"
+                inputMode="numeric"
+                placeholder="123456"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                onKeyDown={(e) => e.key === "Enter" && verify()}
+              />
+            </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <Button className="w-full" onClick={verify} disabled={pending}>
+              {pending ? t("verify.submitting") : t("verify.submit")}
+            </Button>
+            <button
+              type="button"
+              className="w-full text-center text-sm text-muted-foreground underline-offset-4 hover:underline"
+              onClick={() => { setStep("credentials"); setError(null); }}
+            >
+              {t("verify.back")}
+            </button>
+          </>
+        )}
       </CardContent>
     </Card>
   );

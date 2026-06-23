@@ -16,8 +16,12 @@ export async function POST(request: Request) {
   });
 
   if (error || !data?.accessToken) {
+    const msg = error?.message ?? "";
+    if (msg.toLowerCase().includes("verification") || msg.toLowerCase().includes("verified")) {
+      return NextResponse.json({ requireEmailVerification: true }, { status: 200 });
+    }
     return NextResponse.json(
-      { error: error?.message ?? "Sign in failed", code: error?.error },
+      { error: msg || "Sign in failed", code: error?.error },
       { status: error?.statusCode ?? 401 }
     );
   }

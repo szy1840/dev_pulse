@@ -30,8 +30,13 @@ export async function POST(request: Request) {
   });
 
   if (error) {
+    const msg = error.message ?? "";
+    // Account exists but email not verified — treat as needing verification instead of an error.
+    if (msg.toLowerCase().includes("already") || msg.toLowerCase().includes("exists")) {
+      return NextResponse.json({ requireEmailVerification: true });
+    }
     return NextResponse.json(
-      { error: error.message ?? "Sign up failed", code: error.error },
+      { error: msg || "Sign up failed", code: error.error },
       { status: error.statusCode ?? 400 }
     );
   }
