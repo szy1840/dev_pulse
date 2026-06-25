@@ -66,6 +66,10 @@ export default async function MemberDetailPage({
   const member = await getTeamMemberProfile(team.id, memberId);
   if (!member) notFound();
 
+  const isOwnerOrAdmin = team.role === "owner" || team.role === "admin";
+  const isOwnProfile = memberId === userId;
+  const canViewDetails = isOwnerOrAdmin || isOwnProfile;
+
   const sp = await searchParams;
   const timeZone = await getViewerTimezone(userId);
   const locale = (await getLocale()) as Locale;
@@ -82,7 +86,7 @@ export default async function MemberDetailPage({
       getToolBreakdown(team.id, range, memberId),
       getProjectBreakdown(team.id, range, memberId),
       getMemberHeatmap(team.id, memberId, range, timeZone),
-      getRecentSessions(team.id, range, 500, memberId),
+      canViewDetails ? getRecentSessions(team.id, range, 500, memberId) : Promise.resolve([]),
     ]);
 
   const memberName = member.name ?? t("memberFallback");
@@ -137,16 +141,18 @@ export default async function MemberDetailPage({
         />
       </div>
 
-      {/* AI period summary */}
-      <Suspense key={`${range.view}:${range.anchor}`} fallback={<SummaryCardSkeleton />}>
-        <MemberSummarySection
-          teamId={team.id}
-          memberId={memberId}
-          memberName={memberName}
-          range={range}
-          timeZone={timeZone}
-        />
-      </Suspense>
+      {/* AI period summary — admin/owner only for other members */}
+      {canViewDetails && (
+        <Suspense key={`${range.view}:${range.anchor}`} fallback={<SummaryCardSkeleton />}>
+          <MemberSummarySection
+            teamId={team.id}
+            memberId={memberId}
+            memberName={memberName}
+            range={range}
+            timeZone={timeZone}
+          />
+        </Suspense>
+      )}
 
       {/* Headline stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -241,14 +247,16 @@ export default async function MemberDetailPage({
         </ChartCard>
       </div>
 
-      {/* Sessions */}
-      <div className="space-y-3">
-        <div>
-          <h2 className="text-base font-semibold">{t("detail.sessionsHeading")}</h2>
-          <p className="text-sm text-muted-foreground">{t("detail.sessionsSubheading", { name: memberName })}</p>
+      {/* Sessions — admin/owner only for other members */}
+      {canViewDetails && (
+        <div className="space-y-3">
+          <div>
+            <h2 className="text-base font-semibold">{t("detail.sessionsHeading")}</h2>
+            <p className="text-sm text-muted-foreground">{t("detail.sessionsSubheading", { name: memberName })}</p>
+          </div>
+          <SessionsExplorer sessions={sessions} showMember={false} />
         </div>
-        <SessionsExplorer sessions={sessions} showMember={false} />
-      </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,5 @@
 import OpenAI from "openai";
 import { getAdmin } from "./insforge/admin";
-import { isStoredSummaryFresh } from "./ai-summary";
 import type { SessionLike } from "./summary";
 import type { Locale } from "./locale";
 import type { PeriodRange } from "./period";
@@ -43,11 +42,13 @@ async function generate(
   const avgTokens = sessions.length ? Math.round(totalTokens / sessions.length) : 0;
 
   const system =
-    `You are an AI productivity coach analyzing ${periodPhrase} AI coding usage data for a software team. ` +
-    `Generate exactly 3 specific, actionable tips to help the team use AI coding tools more effectively. ` +
+    `You are writing a short "what's working this week" digest for a team's internal dashboard. ` +
+    `Based on ${periodPhrase} AI usage data, write exactly 3 tips that highlight a specific workflow or habit a real team member used effectively. ` +
     `Return a JSON array: [{"emoji":"...","title":"...","body":"..."}] ` +
-    `Rules: emoji = single relevant emoji; title = 4-8 words imperative phrase; body = 1-2 sentences, concrete and specific to the actual usage data shown. ` +
-    `Base tips ONLY on the observed patterns — do NOT give generic advice. ` +
+    `Rules for each tip: ` +
+    `emoji = one relevant emoji. ` +
+    `title = short noun phrase naming the method, 4-7 words, no verbs, no imperative. ` +
+    `body = 2-3 sentences. Start by naming what someone actually did (e.g. "Ray broke his research into three separate prompts instead of one long conversation"). Then explain the concrete result. End with one specific thing anyone can try right now. Write like a colleague sharing a tip at a standup, not like a blog post. No dashes, no arrows, no buzzwords, no abstract phrases like "leverage" or "optimize". Base tips ONLY on the actual usage data. ` +
     LANGUAGE_DIRECTIVE[locale];
 
   const prompt = [
@@ -79,7 +80,8 @@ async function generate(
       : (parsed.tips ?? parsed.items ?? Object.values(parsed)[0]);
     if (!Array.isArray(arr) || arr.length === 0) return null;
     return arr.slice(0, 3) as AiTip[];
-  } catch {
+  } catch (err) {
+    console.error("[ai-tips] generate failed:", err);
     return null;
   }
 }
@@ -107,7 +109,11 @@ async function getStored(
   if (!data?.summary) return null;
   try {
     const tips = JSON.parse(data.summary) as AiTip[];
-    const fresh = isStoredSummaryFresh(data.model) && (data.session_count ?? 0) > 0;
+    const model = data.model as string | null;
+    const fresh =
+      model !== null &&
+      (model === TIPS_VERSION || model.endsWith(`:${TIPS_VERSION}`)) &&
+      (data.session_count ?? 0) > 0;
     return { tips, fresh };
   } catch {
     return null;
@@ -154,13 +160,14 @@ export async function getTeamAiTips(
   locale: Locale = "en"
 ): Promise<AiTip[] | null> {
   if (range.view !== "week" && range.view !== "month") return null;
+  if (range.isCurrent) return null;
   if (sessions.length === 0) return null;
 
   const stored = await getStored(teamId, range.anchor, timeZone, locale, range.view);
   if (stored?.fresh) return stored.tips;
 
   const tips = await generate(sessions, range.phrase, locale);
-  if (!tips) return null;
+  if (!tips) return stored?.tips ?? null; // fall back to stale cache on generation failure
 
   await store(teamId, range.anchor, timeZone, locale, range.view, tips, sessions.length);
   return tips;

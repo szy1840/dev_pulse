@@ -55,6 +55,12 @@
       "leaveDescription": "停止向本团队同步，并将自己从成员名单中移除。",
       "leave": "退出团队",
       "onlyOwnerNote": "作为唯一的所有者，在添加其他所有者之前你无法退出。",
+      "makeAdmin": "设为管理员",
+      "removeAdmin": "撤销管理员",
+      "makeAdminConfirm": "将 {name} 设为管理员？管理员可查看所有成员的会话详情和 AI 摘要。",
+      "makeAdminConfirmLabel": "设为管理员",
+      "removeAdminConfirm": "撤销 {name} 的管理员权限？对方将恢复为普通成员。",
+      "removeAdminConfirmLabel": "撤销管理员",
       "cancel": "取消"
     },
     "invites": {

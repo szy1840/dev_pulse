@@ -26,10 +26,11 @@ export default async function SessionsPage({
   const timeZone = await getViewerTimezone(userId);
   const locale = (await getLocale()) as Locale;
   const range = resolveRange(params.view ?? params.period, params.anchor, timeZone, locale);
+  const memberFilter = team.role === "member" ? userId : undefined;
   const [rows, models, tools] = await Promise.all([
-    getRecentSessions(team.id, range, 500),
-    getModelBreakdown(team.id, range),
-    getToolBreakdown(team.id, range),
+    getRecentSessions(team.id, range, 500, memberFilter),
+    getModelBreakdown(team.id, range, memberFilter),
+    getToolBreakdown(team.id, range, memberFilter),
   ]);
 
   const modelSlices = models.slice(0, 6).map((m) => ({ name: prettyModel(m.model), value: m.sessionCount }));

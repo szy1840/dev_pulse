@@ -55,6 +55,12 @@
       "leaveDescription": "Stop syncing to this team and remove yourself from the roster.",
       "leave": "Leave team",
       "onlyOwnerNote": "As the only owner, you cannot leave until another owner is added.",
+      "makeAdmin": "Make admin",
+      "removeAdmin": "Remove admin",
+      "makeAdminConfirm": "Make {name} an admin? Admins can view all members' session details and AI summaries.",
+      "makeAdminConfirmLabel": "Make admin",
+      "removeAdminConfirm": "Remove admin access from {name}? They'll revert to a regular member.",
+      "removeAdminConfirmLabel": "Remove admin",
       "cancel": "Cancel"
     },
     "invites": {

@@ -3,8 +3,18 @@ import { CheckCircle2 } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 import { LocaleSwitcher } from "@/components/locale-switcher";
+import { UserMenu } from "@/components/user-menu";
 import { LandingShowcase } from "@/components/landing-showcase";
 import { getCurrentUser } from "@/lib/auth";
+import {
+  MockOverview,
+  MockLeaderboard,
+  MockSummary,
+  MockSessions,
+  MockInsights,
+  MockHeatmap,
+  MockROI,
+} from "@/components/landing-mock-slides";
 
 const BOARD_ROWS = {
   zh: [
@@ -33,14 +43,56 @@ export default async function Home() {
   const rows = BOARD_ROWS[locale as keyof typeof BOARD_ROWS] ?? BOARD_ROWS.en;
 
   const SLIDES = [
-    { tab: t("show.s1tab"), title: t("show.s1t"), desc: t("show.s1d"), img: "/screenshots/overview.jpg" },
-    { tab: t("show.s2tab"), title: t("show.s2t"), desc: t("show.s2d"), img: "/screenshots/ranking.jpg" },
-    { tab: t("show.s3tab"), title: t("show.s3t"), desc: t("show.s3d"), img: "/screenshots/summary.jpg" },
-    { tab: t("show.s4tab"), title: t("show.s4t"), desc: t("show.s4d"), img: "/screenshots/sessions.jpg" },
-    { tab: t("show.s5tab"), title: t("show.s5t"), desc: t("show.s5d"), img: "/screenshots/insights.jpg" },
-    { tab: t("show.s6tab"), title: t("show.s6t"), desc: t("show.s6d"), img: "/screenshots/hours.jpg" },
-    { tab: t("show.s7tab"), title: t("show.s7t"), desc: t("show.s7d"), img: "/screenshots/cost.jpg" },
+    { tab: t("show.s1tab"), title: t("show.s1t"), desc: t("show.s1d"), component: <MockOverview   locale={locale} /> },
+    { tab: t("show.s2tab"), title: t("show.s2t"), desc: t("show.s2d"), component: <MockLeaderboard locale={locale} /> },
+    { tab: t("show.s3tab"), title: t("show.s3t"), desc: t("show.s3d"), component: <MockSummary    locale={locale} /> },
+    { tab: t("show.s4tab"), title: t("show.s4t"), desc: t("show.s4d"), component: <MockSessions   locale={locale} /> },
+    { tab: t("show.s5tab"), title: t("show.s5t"), desc: t("show.s5d"), component: <MockInsights   locale={locale} /> },
+    { tab: t("show.s6tab"), title: t("show.s6t"), desc: t("show.s6d"), component: <MockHeatmap    locale={locale} /> },
+    { tab: t("show.s7tab"), title: t("show.s7t"), desc: t("show.s7d"), component: <MockROI        locale={locale} /> },
   ];
+
+  const AI_TIPS = locale === "zh"
+    ? [
+        {
+          emoji: "🗂️",
+          title: "先给背景，再提问题",
+          body: "林悦每次开始内容工作前，先告诉 AI 频道特点、目标人群和本月主题，再提具体问题。这样生成的选题不用大改，本周她用这个方法半小时出了一整月的排期，以前要两天。你可以直接试：把你的项目背景放在对话第一条，然后再开始提问。",
+          ini: "林", name: "林悦", role: "内容组", color: "#ff9f0a",
+        },
+        {
+          emoji: "✂️",
+          title: "一个任务拆成几个对话",
+          body: "陈睿做投放调研时，不把所有问题堆进一个对话，而是分开问：第一个对话做竞品梳理，第二个做受众画像，第三个写文案。每次 AI 的注意力更集中，结果质量明显更好。本周他用这个方法交了 8 份简报，比上周同期快了一倍。",
+          ini: "陈", name: "陈睿", role: "投放组", color: "#0066cc",
+        },
+        {
+          emoji: "📋",
+          title: "先说标准，再要结果",
+          body: "苏晴让 AI 审设计稿之前，会先列出「这个组件要满足哪些条件」，比如对齐规范、无障碍要求、交互反馈。AI 给的反馈直接对应标准，她不用反复追问。本周 34 个组件一次性通过评审，返工少了一半。",
+          ini: "苏", name: "苏晴", role: "设计组", color: "#ff2d55",
+        },
+      ]
+    : [
+        {
+          emoji: "🗂️",
+          title: "Context first, then the question",
+          body: "Maya Lin starts every content session by telling the AI the channel, the audience, and this month's theme before asking anything specific. The output needs far less editing. This week she used this habit to plan a full month of content in 30 minutes — a task that used to take two days. Try it: put your project background in the first message, then start asking.",
+          ini: "M", name: "Maya Lin", role: "Content", color: "#ff9f0a",
+        },
+        {
+          emoji: "✂️",
+          title: "One task, one conversation",
+          body: "Ray Chen never piles everything into a single chat. For ad research, he runs three separate conversations: one for competitive analysis, one for audience profiling, one for copy. Each session stays focused and the output is sharper. This week he delivered 8 briefs at twice the speed of the week before.",
+          ini: "R", name: "Ray Chen", role: "Paid Media", color: "#0066cc",
+        },
+        {
+          emoji: "📋",
+          title: "List the criteria before asking for a review",
+          body: "Before Sophie Su asks the AI to review a design component, she writes out what it needs to pass: alignment rules, accessibility requirements, interaction states. The feedback maps directly to those criteria so there is no back and forth. This week 34 components cleared review in one round, with half the revisions compared to before.",
+          ini: "S", name: "Sophie Su", role: "Design", color: "#ff2d55",
+        },
+      ];
 
   return (
     <div className="flex min-h-screen flex-col overflow-x-hidden bg-white text-[#1d1d1f]">
@@ -57,9 +109,12 @@ export default async function Home() {
           <div className="flex items-center gap-3.5">
             <LocaleSwitcher />
             {user ? (
-              <Button asChild size="sm">
-                <Link href="/dashboard">{t("nav.openDashboard")}</Link>
-              </Button>
+              <UserMenu
+                name={user.name}
+                email={user.email}
+                avatarUrl={user.avatarUrl}
+                showDashboardLink
+              />
             ) : (
               <>
                 <Link href="/sign-in" className="hidden text-sm font-medium text-[#0066cc] hover:underline sm:block">
@@ -240,6 +295,50 @@ export default async function Home() {
               <p className="mt-4 text-[19px] leading-snug tracking-[-0.01em] text-[#6e6e73]">{t("show.sub")}</p>
             </div>
             <LandingShowcase slides={SLIDES} />
+          </div>
+        </section>
+
+        {/* AI Classroom */}
+        <section className="border-t border-black/[0.09] py-[132px]">
+          <div className="mx-auto max-w-[1024px] px-7">
+            <div className="mx-auto mb-[72px] max-w-[720px] text-center">
+              <div className="mb-5 inline-flex items-center gap-1.5 rounded-full bg-[rgba(0,102,204,0.08)] px-3.5 py-1.5 text-[13px] font-semibold text-[#0066cc]">
+                ✦ {t("aicls.badge")}
+              </div>
+              <h2 className="text-[clamp(30px,4vw,46px)] font-semibold leading-[1.08] tracking-[-0.028em]">
+                {t("aicls.title")}
+              </h2>
+              <p className="mt-4 text-[19px] leading-snug tracking-[-0.01em] text-[#6e6e73]">{t("aicls.sub")}</p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              {AI_TIPS.map((tip) => (
+                <div
+                  key={tip.name}
+                  className="flex flex-col rounded-2xl border border-black/[0.08] bg-white p-6 shadow-[0_2px_12px_rgba(0,0,0,0.05)]"
+                >
+                  <div className="mb-3 text-2xl">{tip.emoji}</div>
+                  <h3 className="mb-2 text-[18px] font-semibold leading-snug tracking-[-0.018em]">
+                    {tip.title}
+                  </h3>
+                  <p className="flex-1 text-[15px] leading-relaxed text-[#6e6e73]">{tip.body}</p>
+                  <div className="mt-5 flex items-center gap-2.5 border-t border-black/[0.06] pt-4">
+                    <div
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white"
+                      style={{ background: tip.color }}
+                    >
+                      {tip.ini}
+                    </div>
+                    <div>
+                      <div className="text-[13px] font-semibold text-[#1d1d1f]">{tip.name}</div>
+                      <div className="text-[11px] text-[#86868b]">{tip.role}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <p className="mt-10 text-center text-[13.5px] text-[#86868b]">{t("aicls.note")}</p>
           </div>
         </section>
 

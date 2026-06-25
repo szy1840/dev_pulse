@@ -33,7 +33,13 @@
       "c3t": "Clarity for the boss",
       "c3b": "See which teams are ahead and where the gaps are, in one view. Drive AI adoption with data, not guesswork.",
       "c4t": "One sentence, no code",
-      "c4b": "Send the line we give you to your OpenClaw. It sets itself up in 30 seconds. No tech skills required."
+      "c4b": "Send the line we give you to your agent — OpenClaw, Codex, or any other. It sets itself up in 30 seconds. No tech skills required."
+    },
+    "aicls": {
+      "badge": "AI Classroom",
+      "title": "Learn from your team's top performers",
+      "sub": "DevPulse automatically surfaces the best AI techniques from your highest performers—so everyone can see what works and copy it.",
+      "note": "Auto-surfaced from 4,708 sessions this month"
     },
     "show": {
       "title": "Here's what you'll see inside",
@@ -52,8 +58,8 @@
       "s1t": "Sign up, create a team",
       "s1b": "A minute to sign up. Bring your colleagues in.",
       "s1tag": "No card needed",
-      "s2t": "Send one line to OpenClaw",
-      "s2b": "Copy the text below and send it to your OpenClaw. It sets itself up.",
+      "s2t": "Send one line to your agent",
+      "s2b": "Copy the text below and send it to your agent — OpenClaw, Codex, or any other. It sets itself up.",
       "prompt": "Set up DevPulse for me: install and log in to devpulse, then sync my AI usage. Open the browser to authorize if needed, and tell me when it's done.",
       "copy": "Copy",
       "copied": "Copied",

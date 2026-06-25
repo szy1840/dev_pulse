@@ -25,6 +25,8 @@ export async function MemberSummarySection({
   range: PeriodRange;
   timeZone: string;
 }) {
+  if ((range.view === "week" || range.view === "month") && range.isCurrent) return null;
+
   const locale = (await getLocale()) as Locale;
   const summarySessions = await getSessionsForSummary(teamId, range, memberId);
   const summaries = await getUserPeriodSummaries(

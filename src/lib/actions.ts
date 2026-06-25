@@ -199,6 +199,48 @@ export async function removeTeamMember(
   return { ok: true };
 }
 
+/** Set a member's role to 'admin' or 'member'. Only the team owner can call this. */
+export async function setMemberRole(
+  teamId: string,
+  targetUserId: string,
+  newRole: "admin" | "member"
+): Promise<ActionResult> {
+  const actorId = await requireUserId();
+  const actorRole = await requireMembership(actorId, teamId);
+
+  if (actorRole !== "owner") {
+    return { ok: false, error: "Only the team owner can manage admin roles." };
+  }
+  if (targetUserId === actorId) {
+    return { ok: false, error: "You cannot change your own role." };
+  }
+
+  const admin = getAdmin();
+  const { data: target } = await admin.database
+    .from("team_members")
+    .select("role")
+    .eq("team_id", teamId)
+    .eq("user_id", targetUserId)
+    .maybeSingle();
+
+  if (!target) return { ok: false, error: "Member not found." };
+  if ((target as { role: string }).role === "owner") {
+    return { ok: false, error: "The team owner's role cannot be changed." };
+  }
+
+  const { error } = await admin.database
+    .from("team_members")
+    .update({ role: newRole })
+    .eq("team_id", teamId)
+    .eq("user_id", targetUserId);
+
+  if (error) return { ok: false, error: "Could not update member role." };
+
+  revalidatePath("/dashboard/settings");
+  revalidatePath("/dashboard/members");
+  return { ok: true };
+}
+
 /** Leave the current team. Historical sessions stay with the team. */
 export async function leaveTeam(teamId: string): Promise<ActionResult> {
   const userId = await requireUserId();

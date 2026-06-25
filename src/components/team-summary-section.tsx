@@ -32,6 +32,8 @@ export async function TeamSummarySection({
   sessionCount: number;
   activeMembers: number;
 }) {
+  if ((range.view === "week" || range.view === "month") && range.isCurrent) return null;
+
   const locale = (await getLocale()) as Locale;
   const [periodSessions, members] = await Promise.all([
     getSessionsForSummary(teamId, range),

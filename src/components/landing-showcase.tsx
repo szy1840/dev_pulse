@@ -2,23 +2,13 @@
 
 import { useState, useEffect, useRef, useCallback, useLayoutEffect } from "react";
 import { flushSync } from "react-dom";
-import Image from "next/image";
 
-type Slide = { tab: string; title: string; desc: string; img: string };
+type Slide = { tab: string; title: string; desc: string; component: React.ReactNode };
 
-const AR: Record<string, number> = {
-  overview: 825 / 1600,
-  ranking:  906 / 1600,
-  summary:  908 / 1600,
-  sessions: 902 / 1600,
-  insights: 855 / 1600,
-  hours:    697 / 1600,
-  cost:     848 / 1600,
-};
-const KEYS = ["overview", "ranking", "summary", "sessions", "insights", "hours", "cost"];
+const SLIDE_AR = 0.56; // fixed aspect ratio for all component-based slides
 
 type LState = "center" | "from-right" | "from-left" | "exit-left" | "exit-right" | "idle";
-interface Layer { src: string; state: LState; anim: boolean }
+interface Layer { component: React.ReactNode; state: LState; anim: boolean }
 
 const TRANSFORMS: Record<LState, React.CSSProperties> = {
   center:       { transform: "none",                                         opacity: 1, filter: "none"       },
@@ -46,8 +36,8 @@ function layerStyle(l: Layer): React.CSSProperties {
 export function LandingShowcase({ slides }: { slides: Slide[] }) {
   const N = slides.length;
 
-  const [layerA, setLayerA] = useState<Layer>({ src: slides[0].img, state: "center", anim: false });
-  const [layerB, setLayerB] = useState<Layer>({ src: slides[0].img, state: "idle",   anim: false });
+  const [layerA, setLayerA] = useState<Layer>({ component: slides[0].component, state: "center", anim: false });
+  const [layerB, setLayerB] = useState<Layer>({ component: slides[0].component, state: "idle",   anim: false });
   const curRef  = useRef<"A" | "B">("A");
   const siRef   = useRef(0);
   const busyRef = useRef(false);
@@ -79,9 +69,9 @@ export function LandingShowcase({ slides }: { slides: Slide[] }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [wrapH, setWrapH] = useState(0);
 
-  const setH = useCallback((idx: number) => {
+  const setH = useCallback(() => {
     if (!wrapRef.current) return;
-    setWrapH(wrapRef.current.clientWidth * (AR[KEYS[idx] ?? KEYS[0]] ?? 0.56));
+    setWrapH(wrapRef.current.clientWidth * SLIDE_AR);
   }, []);
 
   const startProg = useCallback(() => {
@@ -107,7 +97,7 @@ export function LandingShowcase({ slides }: { slides: Slide[] }) {
     // Without this, React 18 batches both setState calls into one render,
     // skipping the start frame and breaking the animation.
     flushSync(() => {
-      setInc({ src: slides[to].img, state: dir > 0 ? "from-right" : "from-left", anim: false });
+      setInc({ component: slides[to].component, state: dir > 0 ? "from-right" : "from-left", anim: false });
     });
 
     requestAnimationFrame(() => {
@@ -119,7 +109,7 @@ export function LandingShowcase({ slides }: { slides: Slide[] }) {
     setCaptionVisible(false);
     siRef.current = to;
     setActive(to);
-    setH(to);
+    setH();
     setTimeout(() => setCaptionVisible(true), 150);
     setTimeout(() => {
       setOut(p => ({ ...p, state: "idle", anim: false }));
@@ -140,7 +130,7 @@ export function LandingShowcase({ slides }: { slides: Slide[] }) {
 
   // Measure before first paint to avoid initial jump
   useLayoutEffect(() => {
-    setH(0);
+    setH();
     movePill(0);
   }, [setH, movePill]);
 
@@ -155,7 +145,7 @@ export function LandingShowcase({ slides }: { slides: Slide[] }) {
 
   useEffect(() => {
     let rt: ReturnType<typeof setTimeout>;
-    const fn = () => { clearTimeout(rt); rt = setTimeout(() => { setH(siRef.current); movePill(siRef.current); }, 120); };
+    const fn = () => { clearTimeout(rt); rt = setTimeout(() => { setH(); movePill(siRef.current); }, 120); };
     window.addEventListener("resize", fn);
     return () => window.removeEventListener("resize", fn);
   }, [setH, movePill]);
@@ -219,10 +209,10 @@ export function LandingShowcase({ slides }: { slides: Slide[] }) {
           onMouseLeave={() => { pausedRef.current = false; }}
         >
           <div style={layerStyle(layerA)}>
-            <Image src={layerA.src} alt="" width={1600} height={900} className="w-full" priority />
+            <div className="w-full" style={{ height: wrapH || undefined }}>{layerA.component}</div>
           </div>
           <div style={layerStyle(layerB)}>
-            <Image src={layerB.src} alt="" width={1600} height={900} className="w-full" />
+            <div className="w-full" style={{ height: wrapH || undefined }}>{layerB.component}</div>
           </div>
 
           <span
