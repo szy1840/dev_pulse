@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { getAdmin } from "@/lib/insforge/admin";
 import {
   DEFAULT_TIMEZONE,
@@ -75,21 +76,29 @@ type TaskSpanRow = {
 const SESSION_COLUMNS =
   "id, user_id, external_id, tool, model, project_name, summary, message_count, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, started_at, ended_at, engaged_ms, activity_intervals";
 
-/** Fetch every session for a team within an optional time window, optionally scoped to one member. */
-async function fetchTeamSessions(
-  teamId: string,
-  range: QueryRange,
-  userId?: string
-): Promise<SessionRow[]> {
-  const admin = getAdmin();
-  let q = admin.database.from("sessions").select(SESSION_COLUMNS).eq("team_id", teamId);
-  if (userId) q = q.eq("user_id", userId);
-  if (range.start) q = q.gte("started_at", range.start.toISOString());
-  if (range.end) q = q.lt("started_at", range.end.toISOString());
-  const { data, error } = await q.limit(10000);
-  if (error || !data) return [];
-  return data as SessionRow[];
-}
+/**
+ * Fetch every session for a team within an optional time window, optionally
+ * scoped to one member.
+ *
+ * Wrapped in React `cache()` so that, within a single server render, the many
+ * dashboard aggregations that need the same session rows (stats, daily trend,
+ * model/tool/project breakdowns, heatmap) collapse to ONE network fetch instead
+ * of re-pulling up to 10k rows per call. Dedupe key is (teamId, range, userId)
+ * by reference, so a different period (e.g. the previous-period comparison) is
+ * still fetched separately, as intended.
+ */
+const fetchTeamSessions = cache(
+  async (teamId: string, range: QueryRange, userId?: string): Promise<SessionRow[]> => {
+    const admin = getAdmin();
+    let q = admin.database.from("sessions").select(SESSION_COLUMNS).eq("team_id", teamId);
+    if (userId) q = q.eq("user_id", userId);
+    if (range.start) q = q.gte("started_at", range.start.toISOString());
+    if (range.end) q = q.lt("started_at", range.end.toISOString());
+    const { data, error } = await q.limit(10000);
+    if (error || !data) return [];
+    return data as SessionRow[];
+  }
+);
 
 function toDate(v: string | null): Date | null {
   return v ? new Date(v) : null;
