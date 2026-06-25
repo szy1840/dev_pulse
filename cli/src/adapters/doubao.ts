@@ -15,11 +15,12 @@ function conversationFingerprint(name: string): string {
   return `${createHash("sha256").update(name).digest("hex").slice(0, 16)}:${DOUBAO_PARSER_VERSION}`;
 }
 
-function buildMetadata(id: string, name: string): SessionMetadata {
+function buildMetadata(id: string, name: string, syncedAt: string): SessionMetadata {
   return {
     externalId: `${TOOL}:${id}`,
     tool: TOOL,
-    model: null,
+    // Doubao doesn't expose the model name locally; label generically.
+    model: "doubao",
     projectPathHash: null,
     projectName: null,
     summary: buildSessionSummary({
@@ -33,8 +34,10 @@ function buildMetadata(id: string, name: string): SessionMetadata {
     outputTokens: 0,
     cacheReadTokens: 0,
     cacheCreationTokens: 0,
-    startedAt: null,
-    endedAt: null,
+    // Conversation timestamps aren't stored locally. Use sync time so the
+    // session appears in the current week's dashboard view.
+    startedAt: syncedAt,
+    endedAt: syncedAt,
     engagedMs: 0,
     activityIntervals: [],
     intentMessages: [],
@@ -51,8 +54,9 @@ export const doubaoAdapter: ToolAdapter = {
 
   async discover(): Promise<DiscoveredSession[]> {
     const conversations = await readDoubaoConversations();
+    const syncedAt = new Date().toISOString();
     return conversations.map(({ id, name }) => {
-      const metadata = buildMetadata(id, name);
+      const metadata = buildMetadata(id, name, syncedAt);
       return {
         stateKey: `${TOOL}:${id}`,
         fingerprint: conversationFingerprint(name),

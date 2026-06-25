@@ -21,7 +21,7 @@ import { join } from "node:path";
 import { homedir, tmpdir } from "node:os";
 import { existsSync, cpSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
 
-export const DOUBAO_PARSER_VERSION = "v1";
+export const DOUBAO_PARSER_VERSION = "v2";
 
 export function doubaoDbDir(): string {
   return join(

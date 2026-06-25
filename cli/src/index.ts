@@ -19,7 +19,7 @@ const program = new Command();
 program
   .name("devpulse")
   .description("DevPulse AI — sync local AI coding sessions to your team dashboard.")
-  .version("0.1.2");
+  .version("0.3.2");
 
 program
   .command("login")

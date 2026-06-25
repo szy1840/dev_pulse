@@ -1,6 +1,6 @@
 {
   "name": "devpulse-ai",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "description": "DevPulse AI CLI — sync local AI coding tool sessions to your team dashboard.",
   "type": "module",
   "bin": {
