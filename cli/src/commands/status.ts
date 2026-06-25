@@ -41,7 +41,7 @@ export async function status(opts: StatusOptions = {}) {
       ui.dim(`    ${adapter.label}: not detected`);
       continue;
     }
-    const discovered = adapter.discover({ dir: opts.dir });
+    const discovered = await Promise.resolve(adapter.discover({ dir: opts.dir }));
     let pending = 0;
     for (const ds of discovered) {
       const prev = state.sessions[ds.stateKey];

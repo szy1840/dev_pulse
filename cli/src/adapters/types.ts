@@ -26,5 +26,5 @@ export interface ToolAdapter {
   /** True when this tool's data is present on this machine. */
   available: (opts?: DiscoverOptions) => boolean;
   /** Cheap discovery of candidate sessions (no heavy parsing). */
-  discover: (opts?: DiscoverOptions) => DiscoveredSession[];
+  discover: (opts?: DiscoverOptions) => DiscoveredSession[] | Promise<DiscoveredSession[]>;
 }

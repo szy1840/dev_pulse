@@ -50,7 +50,7 @@ export async function sync(opts: SyncOptions) {
   let skipped = 0;
   for (const adapter of available) {
     let found = 0;
-    const discovered = adapter.discover({ dir: opts.dir });
+    const discovered = await Promise.resolve(adapter.discover({ dir: opts.dir }));
     for (const ds of discovered) {
       found++;
       const prev = state.sessions[ds.stateKey];
